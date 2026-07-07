@@ -4,6 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Генератор КП — ESCORE</title>
+     <!-- Порожня іконка: без цього браузер сам підвантажує /favicon.ico з кореня
+          домену (escoreodessa.github.io), якого там нема, — і це 404 в консолі
+          при кожному відкритті сайту. Не впливає на роботу генератора. -->
+     <link rel="icon" href="data:," />
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
      <!-- Навмисно старіша версія pdf.js (3.11.174, звичайний <script>, не ES-модуль):
