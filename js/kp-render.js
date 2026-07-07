@@ -68,14 +68,26 @@
         <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Встановлена потужність (за інвертором)</div></div>
         <div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">${esc(m.tech.panelModel || "Панелі")}</div></div>
         <div class="stat-card"><div class="num">${m.tech.invertersQty || "—"} шт</div><div class="lbl">${esc(m.tech.inverterModel || "Інвертори")}</div></div>
-                <div class="stat-card"><div class="num">${m.tech.batteryQty || "—"} шт</div><div class="lbl">${esc(m.tech.batteryModel || "Акумулятори")}</div></div>
-                      </div>
+        <div class="stat-card"><div class="num">${m.tech.batteryQty || "—"} шт</div><div class="lbl">${esc(m.tech.batteryModel || "Акумулятори")}</div></div>
+      </div>
     </section>`;
   }
 
-  // ---------- Сторінка 2 — про проєкт + галерея ----------
+  // ---------- Сторінка 2 — про проєкт + технічні показники генерації + галерея ----------
+  // Технічні показники генерації (річна генерація, генерація 1 кВт, за 30
+  // років) і стовпчикова діаграма помісячної генерації навмисно живуть тут,
+  // а не на сторінці "Економічна вигода" — там лишились тільки грошові
+  // показники (тариф, економія, окупність, дохід, LCOE). Розділення
+  // технічних і фінансових даних — свідоме рішення (запит Анни, 2026-07-07).
   function pageAbout(m) {
     const gallery = m.images.slice(1);
+    const chartId = "kp-gen-chart";
+    // Опис обладнання формується з даних (панелі/батарея), а не хардкодиться,
+    // щоб при завантаженні нового файлу-розрахунку текст сам оновлювався.
+    const equipParts = [];
+    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(m.tech.panelModel)}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`акумуляторна батарея <b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
+    const hasGenStats = m.model.annualGenKwh || m.model.annualGenPerKw || m.model.gen30y;
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
@@ -84,9 +96,16 @@
         <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}
         для об'єкта «${esc(m.meta.object)}». Рішення забезпечує генерацію власної електроенергії у денні години,
         коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}</p>
-        ${m.model.annualGenKwh ? `<p>Очікувана річна генерація станції — <b>≈ ${fmtNum(m.model.annualGenKwh)} кВт·год</b>.</p>` : ""}
+        ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}
         <p>Повний цикл робіт «під ключ»: проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</p>
       </div>
+      ${hasGenStats ? `
+      <div class="stat-cards">
+        <div class="stat-card"><div class="num">${m.model.annualGenKwh ? fmtNum(m.model.annualGenKwh) : "—"}</div><div class="lbl">Річна генерація, кВт·год</div></div>
+        <div class="stat-card"><div class="num">${m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) : "—"}</div><div class="lbl">Річна генерація 1 кВт, кВт·год</div></div>
+        <div class="stat-card"><div class="num">${m.model.gen30y ? fmtNum(m.model.gen30y) : "—"}</div><div class="lbl">Генерація за 30 років, кВт·год</div></div>
+      </div>` : ""}
+      ${m.model.months.length ? `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` : ""}
       ${gallery.length ? `<div class="gallery">${gallery.map((g, i) => `<figure><img src="${g.url}"/><figcaption>Зображення ${i + 2}${g.name ? " — " + esc(g.name) : ""}</figcaption></figure>`).join("")}</div>` : ""}
     </section>`;
   }
@@ -162,9 +181,11 @@
     </section>`;
   }
 
-  // ---------- Сторінка 6 — економіка + діаграма ----------
+  // ---------- Сторінка 6 — економічна вигода (лише грошові показники) ----------
+  // Технічні показники генерації і діаграма перенесені на сторінку "Про
+  // проєкт" (pageAbout) — тут навмисно лишили тільки фінанси.
   function pageEconomics(m) {
-    const gen = m.model.annualGenKwh;
+    const gen = m.model.annualGenKwh; // потрібен лише для розрахунку savings нижче
     const tariff = m.overrides.tariffUsdPerKwh;
     const savings = m.model.annualSavingsUsd || (gen && tariff ? gen * tariff : null);
     const monthlySavings = savings ? savings / 12 : null;
@@ -172,7 +193,6 @@
     // (те саме число, що й на сторінці "Вартість проєкту"), а не рахуємо
     // самі — щоб в КП не було двох різних цифр окупності.
     const payback = m.model.paybackYears;
-    const chartId = "kp-gen-chart";
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
@@ -180,12 +200,9 @@
       <div class="kp-body"><p>Розрахунок виконано з припущення, що станція повністю віддає згенеровану електроенергію на потреби
       об'єкта, заміщуючи купівлю електроенергії у постачальника за тарифом ≈ $${tariff}/кВт·год.</p></div>
       <div class="stat-cards">
-        <div class="stat-card"><div class="num">${gen ? fmtNum(gen) : "—"}</div><div class="lbl">Річна генерація, кВт·год</div></div>
         <div class="stat-card"><div class="num">$${tariff}</div><div class="lbl">Тариф заміщення / кВт·год</div></div>
         <div class="stat-card"><div class="num">${monthlySavings ? fmtUsd(monthlySavings) : "—"}</div><div class="lbl">Економія на місяць</div></div>
         <div class="stat-card"><div class="num">${payback ? fmtNum(payback, 2) : "—"}</div><div class="lbl">Проста окупність, років</div></div>
-        <div class="stat-card"><div class="num">${m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) : "—"}</div><div class="lbl">Річна генерація 1 кВт, кВт·год</div></div>
-        <div class="stat-card"><div class="num">${m.model.gen30y ? fmtNum(m.model.gen30y) : "—"}</div><div class="lbl">Генерація за 30 років, кВт·год</div></div>
         <div class="stat-card"><div class="num">${m.model.income30y ? fmtUsd(m.model.income30y) : "—"}</div><div class="lbl">Сумарний дохід за 30 років</div></div>
         <div class="stat-card"><div class="num">${m.model.lcoe30 ? fmtNum(m.model.lcoe30, 2) + " грн" : "—"}</div><div class="lbl">LCOE за 30 років</div></div>
       </div>
@@ -193,7 +210,6 @@
         <div class="benefit-box green"><div class="cap">Реальна економічна вигода</div><div class="big">${savings ? fmtUsd(savings) : "—"} / рік</div></div>
         <div class="benefit-box dark"><div class="cap">Проста окупність</div><div class="big">${payback ? "≈ " + fmtNum(payback, 2) : "—"} року</div></div>
       </div>
-      ${m.model.months.length ? `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` : ""}
     </section>`;
   }
 
@@ -217,8 +233,8 @@
   function buildTechSpec(pdv) {
     const specItems = [];
     let panelModel = null, panelsQty = 0, inverterModel = null, invertersQty = 0;
+    let batteryModel = null, batteryQty = 0;
     let isHybrid = false, hasBattery = false, inverterKwTotal = 0;
-        let batteryModel = null, batteryQty = 0;
     pdv.categories.forEach((cat) => {
       cat.items.forEach((it) => {
         const n = it.name.toLowerCase();
@@ -238,8 +254,8 @@
           const kwMatch = it.name.match(/(\d+(?:[.,]\d+)?)\s*k(?!wh)/i);
           if (kwMatch) inverterKwTotal += parseFloat(kwMatch[1].replace(",", ".")) * (it.qty || 1);
         }
-        if (/акумулятор|акб\b|batter/.test(n)) { hasBattery = true; batteryModel = it.name; batteryQty += it.qty; } 
-                if (it.qty > 0) {
+        if (/акумулятор|акб\b|batter/.test(n)) { hasBattery = true; batteryModel = it.name; batteryQty += it.qty; }
+        if (it.qty > 0) {
           specItems.push({ label: it.name, value: `${it.qty} шт` });
         }
       });
@@ -252,7 +268,7 @@
     const stationTypeGen = hybrid ? "гібридної" : "мережевої";  // "...будівництво гібридної СЕС"
     return {
       specItems: specItems.slice(0, 12), panelModel, panelsQty, inverterModel, invertersQty,
-            batteryModel, batteryQty,
+      batteryModel, batteryQty,
       stationType, stationTypeGen, hasBattery,
       stationCapacityKw: inverterKwTotal || null, // потужність за інвертором — головна цифра в КП
     };
