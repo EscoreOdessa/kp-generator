@@ -213,3 +213,19 @@ window.KpSheets.getSpreadsheetTitle = async function (sheetUrlOrId) {
   const json = await res.json();
   return (json.properties && json.properties.title) || null;
 };
+
+// Назва об'єкта береться з комірки A1 вкладки "Кошторис_Наявність
+// обладнання" (KP_CONFIG.SHEET_TAB_OBJECT_NAME) — саме туди менеджери вписують
+// робочу назву об'єкта (напр. "№ Гранд марін (попередньо)").
+window.KpSheets.getObjectNameFromSheet = async function (sheetUrlOrId) {
+    const id = window.KpSheets.extractSpreadsheetId(sheetUrlOrId);
+    const key = window.KP_CONFIG.GOOGLE_API_KEY;
+    const sheetName = window.KP_CONFIG.SHEET_TAB_OBJECT_NAME;
+    const range = encodeURIComponent(`'${sheetName}'!A1`);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?key=${key}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const v = json.values && json.values[0] && json.values[0][0];
+    return v ? String(v).trim() : null;
+};
