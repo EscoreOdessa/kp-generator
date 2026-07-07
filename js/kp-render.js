@@ -61,8 +61,6 @@
       </div>
       <div class="meta-grid">
         <div><div class="k">Об'єкт</div><div class="v">${esc(m.meta.object) || "—"}</div></div>
-        <div><div class="k">Адреса</div><div class="v">${esc(m.meta.address) || "—"}</div></div>
-        <div><div class="k">Замовник</div><div class="v">${esc(m.meta.client) || "—"}</div></div>
         <div><div class="k">Виконавець</div><div class="v">${esc(m.meta.company.name)}</div></div>
       </div>
       ${hero ? `<div class="hero-img"><img src="${hero.url}"/></div><div class="caption">Розташування панелей на об'єкті${hero.name ? " — " + esc(hero.name) : ""}.</div>` : ""}
@@ -70,8 +68,8 @@
         <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Встановлена потужність (за інвертором)</div></div>
         <div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">${esc(m.tech.panelModel || "Панелі")}</div></div>
         <div class="stat-card"><div class="num">${m.tech.invertersQty || "—"} шт</div><div class="lbl">${esc(m.tech.inverterModel || "Інвертори")}</div></div>
-        <div class="stat-card"><div class="num">${m.meta.tiltAngle ? m.meta.tiltAngle + "°" : "—"}</div><div class="lbl">Кут нахилу площини</div></div>
-      </div>
+                <div class="stat-card"><div class="num">${m.tech.batteryQty || "—"} шт</div><div class="lbl">${esc(m.tech.batteryModel || "Акумулятори")}</div></div>
+                      </div>
     </section>`;
   }
 
@@ -220,6 +218,7 @@
     const specItems = [];
     let panelModel = null, panelsQty = 0, inverterModel = null, invertersQty = 0;
     let isHybrid = false, hasBattery = false, inverterKwTotal = 0;
+        let batteryModel = null, batteryQty = 0;
     pdv.categories.forEach((cat) => {
       cat.items.forEach((it) => {
         const n = it.name.toLowerCase();
@@ -239,8 +238,8 @@
           const kwMatch = it.name.match(/(\d+(?:[.,]\d+)?)\s*k(?!wh)/i);
           if (kwMatch) inverterKwTotal += parseFloat(kwMatch[1].replace(",", ".")) * (it.qty || 1);
         }
-        if (/акумулятор|акб\b|batter/.test(n)) hasBattery = true;
-        if (it.qty > 0) {
+        if (/акумулятор|акб\b|batter/.test(n)) { hasBattery = true; batteryModel = it.name; batteryQty += it.qty; } 
+                if (it.qty > 0) {
           specItems.push({ label: it.name, value: `${it.qty} шт` });
         }
       });
@@ -253,6 +252,7 @@
     const stationTypeGen = hybrid ? "гібридної" : "мережевої";  // "...будівництво гібридної СЕС"
     return {
       specItems: specItems.slice(0, 12), panelModel, panelsQty, inverterModel, invertersQty,
+            batteryModel, batteryQty,
       stationType, stationTypeGen, hasBattery,
       stationCapacityKw: inverterKwTotal || null, // потужність за інвертором — головна цифра в КП
     };
