@@ -108,8 +108,8 @@
       let objectName = document.getElementById("in-object").value.trim();
       if (!objectName && sheetUrl && !useDemo) {
         try {
-          const title = await KpSheets.getSpreadsheetTitle(sheetUrl);
-          if (title) objectName = title.trim();
+          const name = await KpSheets.getObjectNameFromSheet(sheetUrl);  
+                    if (name) objectName = name;
         } catch (e) { /* non-fatal */ }
       }
       if (!objectName) objectName = "Grand Marine";
