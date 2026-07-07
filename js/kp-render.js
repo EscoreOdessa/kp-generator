@@ -73,9 +73,12 @@
   // "Чому саме ESCORE?" має від'ємні відступи, щоб бути на всю ширину
   // сторінки впритул до країв, і візуально перекривав собою логотип, що
   // стояв рядком вище — тепер банер сам слугує заголовком сторінки.
+  // Сертифікат збільшено, а плашка перефарбована у фірмовий зелений колір
+  // замість темного (запит Анни, 2026-07-07) — див. клас "why-page" і
+  // відповідні стилі у style.css.
   function pageWhyEscore() {
     return `
-    <section class="kp-page">
+    <section class="kp-page why-page">
       <div class="why-banner">Чому саме ESCORE?</div>
       <div class="why-body">
         <div class="why-cert"><img src="assets/cert.jpg" alt="Сертифікат ISO 9001"/></div>
