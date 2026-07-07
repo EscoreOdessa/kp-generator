@@ -1,4 +1,5 @@
-// kp-render.js — будує розмітку комерційної пропозиції (7 сторінок А4)
+// kp-render.js — будує розмітку комерційної пропозиції (9 сторінок А4,
+// альбомна орієнтація)
 // з даних, зібраних у app.js (таблиця розрахунків + PDF генерації +
 // зображення), і малює діаграму помісячної генерації через Chart.js.
 
@@ -47,7 +48,51 @@
       </div>`;
   }
 
-  // ---------- Сторінка 1 — обкладинка ----------
+  // ---------- Сторінка 1 — титульний слайд ----------
+  // Взято з референсної презентації (запит Анни, 2026-07-07): фото заходу
+  // на СЕС завжди фіксоване (assets/hero-bg.jpg), а не фото завантаженого
+  // об'єкта. Напис під фото складається з типу станції (мережева/гібридна)
+  // і потужності — тих самих даних, що вже рахує buildTechSpec, тому він
+  // сам оновлюється під кожен новий файл-розрахунок.
+  function pageHero(m) {
+    return `
+    <section class="kp-page hero-page">
+      <div class="hero-bg" style="background-image:url('assets/hero-bg.jpg')"></div>
+      <div class="hero-overlay"></div>
+      <img class="hero-logo" src="assets/logo-white.png" alt="escore" />
+      <div class="hero-title">${cap(m.tech.stationType)} сонячна<br/>електростанція${m.tech.stationCapacityKw ? `<br/>${fmtNum(m.tech.stationCapacityKw, 2)} кВт` : ""}</div>
+    </section>`;
+  }
+
+  // ---------- Сторінка 2 — "Чому саме ESCORE?" ----------
+  // Контент (сертифікат + асоціації) — 1:1 з референсної презентації,
+  // не залежить від даних розрахунку. Перекладено з альбомної презентації
+  // під наш (тепер теж альбомний) формат сторінки — сертифікат зліва,
+  // пункти й сітка логотипів справа (запит Анни, 2026-07-07).
+  function pageWhyEscore() {
+    return `
+    <section class="kp-page">
+      <img class="logo" src="data:image/png;base64,${ESCORE_LOGO_B64}" alt="escore" style="height:26px; display:block; margin-bottom:18px;" />
+      <div class="why-banner">Чому саме ESCORE?</div>
+      <div class="why-body">
+        <div class="why-cert"><img src="assets/cert.jpg" alt="Сертифікат ISO 9001"/></div>
+        <div class="why-content">
+          <div class="why-point"><span class="chk">✓</span> Ми маємо СЕРТИФІКАТ на систему управління якістю</div>
+          <div class="why-point"><span class="chk">✓</span> Ми є членами таких асоціацій:</div>
+          <div class="why-logos">
+            <img src="assets/logo-women.jpg" alt="Жіночий енергоклуб України"/>
+            <img src="assets/logo-sup.jpg" alt="Спілка Українських Підприємців"/>
+            <img src="assets/logo-asau.jpg" alt="Асоціація сонячної енергетики України"/>
+            <img src="assets/logo-tpp.jpg" alt="Торгово-Промислова палата України"/>
+            <img src="assets/logo-onpu.jpg" alt="Одеська політехніка"/>
+            <img src="assets/logo-employers.jpg" alt="Об'єднання організацій роботодавців Одеської області"/>
+          </div>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  // ---------- Сторінка 3 — обкладинка (дані по проєкту) ----------
   function pageCover(m) {
     const hero = m.images[0];
     return `
@@ -331,6 +376,8 @@
     model.tech = buildTechSpec(model.pdv);
 
     const html = [
+      pageHero(model),
+      pageWhyEscore(),
       pageCover(model),
       pageAbout(model),
       pageTech(model),
