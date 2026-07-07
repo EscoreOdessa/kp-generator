@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Генератор КП — ESCORE</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.min.js"></script>
+<!-- Навмисно старіша версія pdf.js (3.11.174, звичайний <script>, не ES-модуль):
+     сучасні версії pdf.js розповсюджуються тільки як ES-модулі, а вони не
+     працюють при відкритті сторінки напряму як file:// (Chrome блокує
+     import з локальних файлів). Ця версія працює і з file://, і після
+     розгортання на GitHub Pages. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+</script>
+</head>
+<body>
+
+<div class="form-shell no-print">
+  <h1>Генератор комерційної пропозиції — СЕС <span style="font-size:11px;color:#999;font-weight:normal;">(білд v4 — pdf.js без модулів)</span></h1>
+  <p class="sub">Вкажіть посилання на файл-розрахунок (Google Sheets), за бажанням додайте PDF з розрахунком генерації та зображення розташування панелей — і сформуйте брендоване КП.</p>
+
+  <div class="field">
+    <label>Посилання на Google Sheet з розрахунком</label>
+    <input type="url" id="in-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." />
+    <div class="hint">Таблиця має бути відкрита «за посиланням». Вкладки мають називатись «ПДВ» і «Моделювання Фін. показників роботи СЕС» (див. js/config.js).</div>
+  </div>
+
+  <div class="field">
+    <label><input type="checkbox" id="chk-demo" /> Використати демо-дані (Grand Marine) — не читати Google Sheets</label>
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label>PDF з розрахунком генерації (опційно)</label>
+      <div class="dropzone" id="drop-genpdf">
+        <input type="file" id="in-genpdf" accept="application/pdf" />
+        <div class="dropzone-hint">Перетягніть PDF сюди або натисніть, щоб вибрати файл</div>
+        <div class="dropzone-filename" id="genpdf-filename"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Зображення розташування панелей / візуалізація</label>
+      <div class="dropzone" id="drop-images">
+        <input type="file" id="in-images" accept="image/*" multiple />
+        <div class="dropzone-hint">Перетягніть картинку(и) сюди або натисніть, щоб вибрати файл</div>
+      </div>
+      <div class="thumb-list" id="img-thumbs"></div>
+    </div>
+  </div>
+
+  <div class="row3">
+    <div class="field"><label>Об'єкт</label><input type="text" id="in-object" placeholder="напр. Grand Marine" /></div>
+    <div class="field"><label>Адреса</label><input type="text" id="in-address" placeholder="м. Одеса, ..." /></div>
+    <div class="field"><label>Замовник</label><input type="text" id="in-client" placeholder="(якщо відомо)" /></div>
+  </div>
+  <div class="row3">
+    <div class="field"><label>№ КП (якщо порожньо — згенерується)</label><input type="text" id="in-kpnum" /></div>
+    <div class="field"><label>Термін дії пропозиції, днів</label><input type="number" id="in-validdays" value="14" /></div>
+    <div class="field"><label>Кут нахилу, ° (опційно)</label><input type="text" id="in-tilt" placeholder="напр. 12" /></div>
+  </div>
+  <div class="row3">
+    <div class="field"><label>Ставка ПДВ, %</label><input type="number" id="in-vat" value="20" /></div>
+    <div class="field"><label>Передоплата, %</label><input type="number" id="in-prepay" value="70" /></div>
+    <div class="field"><label>Тариф заміщення, $/кВт·год</label><input type="number" id="in-tariff" step="0.01" value="0.33" /></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="btn-generate">Сформувати КП</button>
+    <button class="btn secondary" id="btn-print">Друк / зберегти як PDF</button>
+    <span class="status-msg" id="status"></span>
+  </div>
+</div>
+
+<div id="kp-doc"></div>
+
+<script src="js/logo.js"></script>
+<script src="js/config.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/pdf-report.js"></script>
+<script src="js/images.js"></script>
+<script src="js/kp-render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

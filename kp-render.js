@@ -1,0 +1,304 @@
+// kp-render.js — будує розмітку комерційної пропозиції (7 сторінок А4)
+// з даних, зібраних у app.js (таблиця розрахунків + PDF генерації +
+// зображення), і малює діаграму помісячної генерації через Chart.js.
+
+(function () {
+  const fmtUsd = (n) =>
+    n === null || n === undefined || isNaN(n) ? "—" : "$" + Math.round(n).toLocaleString("en-US");
+  const fmtNum = (n, d = 0) =>
+    n === null || n === undefined || isNaN(n) ? "—" : Number(n).toLocaleString("uk-UA", { maximumFractionDigits: d });
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function defaultKpNumber(d) {
+    return "КП-" + String(d.getFullYear()).slice(2) + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "-" + pad2(d.getHours()) + pad2(d.getMinutes());
+  }
+  function fmtDate(d) { return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1) + "." + d.getFullYear(); }
+
+  function pageHeader(meta, pageLabel) {
+    return `
+      <div class="kp-header">
+        <img class="logo" src="data:image/png;base64,${ESCORE_LOGO_B64}" alt="escore" />
+        <div class="doc-meta">
+          <strong>КОМЕРЦІЙНА ПРОПОЗИЦІЯ</strong><br/>
+          № ${esc(meta.kpNumber)} · від ${esc(meta.kpDateStr)}<br/>
+          Дійсна ${esc(meta.validDays)} календарних днів
+        </div>
+      </div>`;
+  }
+
+  function footerDark(company) {
+    return `
+      <div class="footer-dark">
+        <div>
+          <div class="fname">escore</div>
+          <div class="fsub">${esc(company.tagline).replace(/\n/g, "<br/>")}</div>
+        </div>
+        <div class="fcontact">
+          <div><b>${esc(company.name)}</b></div>
+          <div>${esc(company.address)}</div>
+          <div>тел.: ${esc(company.phone)} · ${esc(company.email)}</div>
+          <div>${esc(company.site)}</div>
+        </div>
+      </div>
+      <div class="disclaimer">
+        Комерційна пропозиція має інформаційний характер і не є публічною офертою. Остаточна вартість визначається
+        договором після робочого проєктування та узгодження специфікації обладнання.
+      </div>`;
+  }
+
+  // ---------- Сторінка 1 — обкладинка ----------
+  function pageCover(m) {
+    const hero = m.images[0];
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta, "cover")}
+      <div class="kp-eyebrow">Сонячна електростанція під ключ</div>
+      <div class="kp-title">${cap(m.tech.stationType)} СЕС «${esc(m.meta.object)}»${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>
+      <div class="kp-desc">
+        Тип рішення: <b>${esc(m.tech.stationType)} сонячна електростанція</b>${m.tech.hasBattery ? " з акумуляторною батареєю (автономія / резерв)" : ""} — генерація
+        власної електроенергії для потреб об'єкта зі зниженням витрат на електропостачання.
+      </div>
+      <div class="meta-grid">
+        <div><div class="k">Об'єкт</div><div class="v">${esc(m.meta.object) || "—"}</div></div>
+        <div><div class="k">Адреса</div><div class="v">${esc(m.meta.address) || "—"}</div></div>
+        <div><div class="k">Замовник</div><div class="v">${esc(m.meta.client) || "—"}</div></div>
+        <div><div class="k">Виконавець</div><div class="v">${esc(m.meta.company.name)}</div></div>
+      </div>
+      ${hero ? `<div class="hero-img"><img src="${hero.url}"/></div><div class="caption">Розташування панелей на об'єкті${hero.name ? " — " + esc(hero.name) : ""}.</div>` : ""}
+      <div class="stat-cards">
+        <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Встановлена потужність (за інвертором)</div></div>
+        <div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">${esc(m.tech.panelModel || "Панелі")}</div></div>
+        <div class="stat-card"><div class="num">${m.tech.invertersQty || "—"} шт</div><div class="lbl">${esc(m.tech.inverterModel || "Інвертори")}</div></div>
+        <div class="stat-card"><div class="num">${m.meta.tiltAngle ? m.meta.tiltAngle + "°" : "—"}</div><div class="lbl">Кут нахилу площини</div></div>
+      </div>
+    </section>`;
+  }
+
+  // ---------- Сторінка 2 — про проєкт + галерея ----------
+  function pageAbout(m) {
+    const gallery = m.images.slice(1);
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">01</span> Про проєкт</div>
+      <div class="kp-body">
+        <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}
+        для об'єкта «${esc(m.meta.object)}». Рішення забезпечує генерацію власної електроенергії у денні години,
+        коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}</p>
+        ${m.model.annualGenKwh ? `<p>Очікувана річна генерація станції — <b>≈ ${fmtNum(m.model.annualGenKwh)} кВт·год</b>.</p>` : ""}
+        <p>Повний цикл робіт «під ключ»: проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</p>
+      </div>
+      ${gallery.length ? `<div class="gallery">${gallery.map((g, i) => `<figure><img src="${g.url}"/><figcaption>Зображення ${i + 2}${g.name ? " — " + esc(g.name) : ""}</figcaption></figure>`).join("")}</div>` : ""}
+    </section>`;
+  }
+
+  // ---------- Сторінка 3 — технічне рішення ----------
+  function pageTech(m) {
+    const items = m.tech.specItems;
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">02</span> Технічне рішення</div>
+      <div class="split-list">
+        ${items.map((it) => `<div class="spec-item"><b>${esc(it.label)}</b>${esc(it.value)}</div>`).join("")}
+      </div>
+      ${m.pdvReportImage ? `<div class="hero-img" style="margin-top:22px;"><img src="${m.pdvReportImage}"/></div><div class="caption">Додаток: розрахунок генерації електроенергії.</div>` : ""}
+    </section>`;
+  }
+
+  // ---------- Сторінка 4 — номенклатура ----------
+  function pageNomenclature(m) {
+    const rows = [];
+    m.pdv.categories.forEach((cat) => {
+      const subtotal = cat.items.reduce((s, it) => s + it.lineNetto, 0);
+      rows.push(`<tr class="cat"><td>${esc(cat.code)}</td><td>${esc(cat.name)}</td><td></td><td class="num"></td><td class="num">${fmtUsd(subtotal)}</td></tr>`);
+      cat.items.forEach((it) => {
+        rows.push(`<tr><td>${esc(it.code)}</td><td>${esc(it.name)}</td><td class="num">${fmtNum(it.qty)}</td><td class="num">${fmtUsd(it.unitNetto)}</td><td class="num">${fmtUsd(it.lineNetto)}</td></tr>`);
+      });
+    });
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">03</span> Номенклатура товарів і послуг</div>
+      <table class="kp-table">
+        <thead><tr><th>№</th><th>Найменування</th><th class="num">К-сть</th><th class="num">Ціна за од., $</th><th class="num">Сума, $</th></tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+      <div class="caption">* Ціни вказано в доларах США (USD), без ПДВ. Обсяги та специфікація уточнюються за результатами робочого проєктування.</div>
+    </section>`;
+  }
+
+  // ---------- Сторінка 5 — вартість проєкту ----------
+  // Підсумкові цифри тут навмисно беруться напряму з вкладки "Моделювання"
+  // (рядки 1-3: "Вартість СЕС", "Вартість 1 кВт СЕС", "Потужність СЕС",
+  // "Термін окупності") — це вже готовий, узгоджений розрахунок автора
+  // таблиці (враховує ПДВ, бонуси, комісії тощо), а не наша власна
+  // прикидка "нетто × 1.2".
+  function pageCost(m) {
+    const netto = m.pdv.nettoTotal;
+    const vatRate = m.overrides.vatRate;
+    // "Вартість СЕС" з Моделювання — це вже фінальна сума до сплати; якщо
+    // її раптом немає (порожня вкладка), рахуємо запасний варіант netto×(1+ПДВ).
+    const total = m.model.stationCostUsd != null ? m.model.stationCostUsd : netto * (1 + vatRate);
+    const prepPct = m.overrides.prepaymentPct;
+    const prepay = total * (prepPct / 100);
+    const balance = total - prepay;
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">04</span> Вартість проєкту</div>
+      <div class="cost-box">
+        <div class="cost-row"><span>Бюджет проєкту, нетто без ПДВ</span><b>${fmtUsd(netto)}</b></div>
+        <div class="cost-row total"><span>Вартість СЕС — РАЗОМ до сплати</span><span>${fmtUsd(total)}</span></div>
+      </div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="num">${m.model.costPerKw ? fmtUsd(m.model.costPerKw) : "—"}</div><div class="lbl">Вартість 1 кВт СЕС</div></div>
+        <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність фотомодулів</div></div>
+        <div class="stat-card"><div class="num">${m.model.paybackYears ? fmtNum(m.model.paybackYears, 2) : "—"}</div><div class="lbl">Термін окупності, років</div></div>
+      </div>
+      <div class="pay-split">
+        <div class="pay-card"><div class="amt">${fmtUsd(prepay)}</div><div class="lbl">Передоплата · ${prepPct}% — замовлення обладнання, мобілізація</div></div>
+        <div class="pay-card"><div class="amt">${fmtUsd(balance)}</div><div class="lbl">Залишок · ${100 - prepPct}% — після пусконалагодження і здачі</div></div>
+      </div>
+    </section>`;
+  }
+
+  // ---------- Сторінка 6 — економіка + діаграма ----------
+  function pageEconomics(m) {
+    const gen = m.model.annualGenKwh;
+    const tariff = m.overrides.tariffUsdPerKwh;
+    const savings = m.model.annualSavingsUsd || (gen && tariff ? gen * tariff : null);
+    const monthlySavings = savings ? savings / 12 : null;
+    // Термін окупності — беремо готове значення з вкладки "Моделювання"
+    // (те саме число, що й на сторінці "Вартість проєкту"), а не рахуємо
+    // самі — щоб в КП не було двох різних цифр окупності.
+    const payback = m.model.paybackYears;
+    const chartId = "kp-gen-chart";
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">05</span> Економічна вигода та проста окупність</div>
+      <div class="kp-body"><p>Розрахунок виконано з припущення, що станція повністю віддає згенеровану електроенергію на потреби
+      об'єкта, заміщуючи купівлю електроенергії у постачальника за тарифом ≈ $${tariff}/кВт·год.</p></div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="num">${gen ? fmtNum(gen) : "—"}</div><div class="lbl">Річна генерація, кВт·год</div></div>
+        <div class="stat-card"><div class="num">$${tariff}</div><div class="lbl">Тариф заміщення / кВт·год</div></div>
+        <div class="stat-card"><div class="num">${monthlySavings ? fmtUsd(monthlySavings) : "—"}</div><div class="lbl">Економія на місяць</div></div>
+        <div class="stat-card"><div class="num">${payback ? fmtNum(payback, 2) : "—"}</div><div class="lbl">Проста окупність, років</div></div>
+        <div class="stat-card"><div class="num">${m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) : "—"}</div><div class="lbl">Річна генерація 1 кВт, кВт·год</div></div>
+        <div class="stat-card"><div class="num">${m.model.gen30y ? fmtNum(m.model.gen30y) : "—"}</div><div class="lbl">Генерація за 30 років, кВт·год</div></div>
+        <div class="stat-card"><div class="num">${m.model.income30y ? fmtUsd(m.model.income30y) : "—"}</div><div class="lbl">Сумарний дохід за 30 років</div></div>
+        <div class="stat-card"><div class="num">${m.model.lcoe30 ? fmtNum(m.model.lcoe30, 2) + " грн" : "—"}</div><div class="lbl">LCOE за 30 років</div></div>
+      </div>
+      <div class="benefit-strip">
+        <div class="benefit-box green"><div class="cap">Реальна економічна вигода</div><div class="big">${savings ? fmtUsd(savings) : "—"} / рік</div></div>
+        <div class="benefit-box dark"><div class="cap">Проста окупність</div><div class="big">${payback ? "≈ " + fmtNum(payback, 2) : "—"} року</div></div>
+      </div>
+      ${m.model.months.length ? `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` : ""}
+    </section>`;
+  }
+
+  // ---------- Сторінка 7 — умови + футер ----------
+  function pageTerms(m) {
+    const c = m.meta.company;
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">06</span> Що входить та умови</div>
+      <div class="terms-list">
+        <div class="t-row"><b>Повний цикл «під ключ»</b> проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</div>
+        <div class="t-row"><b>Термін реалізації</b> орієнтовно ${esc(m.overrides.leadTimeWeeks)} тижнів від передоплати.</div>
+        <div class="t-row"><b>Гарантія</b> на монтажні роботи — ${esc(m.overrides.warrantyMonths)} міс.; на обладнання — згідно з гарантією виробників.</div>
+        <div class="t-row"><b>Оплата</b> ${m.overrides.prepaymentPct}% передоплата / ${100 - m.overrides.prepaymentPct}% після здачі. Ціни зафіксовано на строк дії пропозиції — ${esc(m.meta.validDays)} днів.</div>
+      </div>
+      ${footerDark(c)}
+    </section>`;
+  }
+
+  function buildTechSpec(pdv) {
+    const specItems = [];
+    let panelModel = null, panelsQty = 0, inverterModel = null, invertersQty = 0;
+    let isHybrid = false, hasBattery = false, inverterKwTotal = 0;
+    pdv.categories.forEach((cat) => {
+      cat.items.forEach((it) => {
+        const n = it.name.toLowerCase();
+        // Панелі в різних файлах називають по-різному: "панель", "PV
+        // модуль", "фотомодуль", код рядка "ФЕМ" тощо. Явно виключаємо
+        // кабельні/кріпильні позиції — їхні назви часто згадують "для
+        // фотомодулів", але самі панелями не є.
+        const looksLikeAccessory = /кабел|провід|конектор|мс4|mc4|кріпленн|стійк/.test(n);
+        const isPanel = !looksLikeAccessory && (/^фем$/i.test(it.code || "") || /панел/.test(n) || /^pv\s*модул/.test(n) || /^фотомодул/.test(n));
+        if (isPanel) { panelModel = it.name; panelsQty += it.qty; }
+        if (/інвертор/.test(n)) {
+          inverterModel = it.name; invertersQty += it.qty;
+          if (/г[іи]брид/.test(n)) isHybrid = true;
+          // Потужність станції визначаємо за інвертором (не за панелями) —
+          // витягуємо кВт з назви моделі, напр. "SUN-30K-..." → 30,
+          // "X3-MGA-50KG2" → 50.
+          const kwMatch = it.name.match(/(\d+(?:[.,]\d+)?)\s*k(?!wh)/i);
+          if (kwMatch) inverterKwTotal += parseFloat(kwMatch[1].replace(",", ".")) * (it.qty || 1);
+        }
+        if (/акумулятор|акб\b|batter/.test(n)) hasBattery = true;
+        if (it.qty > 0) {
+          specItems.push({ label: it.name, value: `${it.qty} шт` });
+        }
+      });
+    });
+    // Тип станції визначається виключно з даних (назва інвертора у вкладці
+    // ПДВ) — ніколи не хардкодиться, бо один і той самий шаблон КП
+    // використовується і для мережевих, і для гібридних станцій.
+    const hybrid = isHybrid || hasBattery;
+    const stationType = hybrid ? "гібридна" : "мережева";       // "Гібридна СЕС" / "Мережева СЕС"
+    const stationTypeGen = hybrid ? "гібридної" : "мережевої";  // "...будівництво гібридної СЕС"
+    return {
+      specItems: specItems.slice(0, 12), panelModel, panelsQty, inverterModel, invertersQty,
+      stationType, stationTypeGen, hasBattery,
+      stationCapacityKw: inverterKwTotal || null, // потужність за інвертором — головна цифра в КП
+    };
+  }
+
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+  function render(model) {
+    const now = new Date();
+    model.meta.kpNumber = model.meta.kpNumber || defaultKpNumber(now);
+    model.meta.kpDateStr = model.meta.kpDateStr || fmtDate(now);
+    model.meta.company = window.KP_CONFIG.COMPANY;
+    model.tech = buildTechSpec(model.pdv);
+
+    const html = [
+      pageCover(model),
+      pageAbout(model),
+      pageTech(model),
+      pageNomenclature(model),
+      pageCost(model),
+      pageEconomics(model),
+      pageTerms(model),
+    ].join("\n");
+
+    const holder = document.getElementById("kp-doc");
+    holder.innerHTML = html;
+    holder.classList.add("ready");
+
+    if (model.model.months.length && window.Chart) {
+      const ctx = document.getElementById("kp-gen-chart");
+      if (ctx) {
+        new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: model.model.months.map((m) => m.month),
+            datasets: [{ label: "Генерація, кВт·год", data: model.model.months.map((m) => m.generation), backgroundColor: "#2FA23A" }],
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } },
+          },
+        });
+      }
+    }
+  }
+
+  window.KpRender = { render };
+})();
