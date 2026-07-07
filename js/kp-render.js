@@ -276,6 +276,47 @@
 
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
+  // Кольори стовпчиків діаграми генерації — 3 рівні за значенням (як на
+  // вкладці "Моделювання Фін. показників роботи СЕС"): найвищі місяці —
+  // жовтий, середні — темно-зелений, найнижчі — світло-зелений. Рівні
+  // рахуються від фактичних даних (ранжування), а не хардкодяться по
+  // місяцях, бо порядок місяців з найвищою генерацією не завжди той самий.
+  function tierColors(values) {
+    const n = values.length;
+    const order = values.map((_, i) => i).sort((a, b) => (values[b] || 0) - (values[a] || 0));
+    const tierSize = Math.ceil(n / 3);
+    const colors = new Array(n);
+    order.forEach((idx, rank) => {
+      if (rank < tierSize) colors[idx] = "#F5C518";           // найвищі — жовтий
+      else if (rank < tierSize * 2) colors[idx] = "#1F7A28";  // середні — темно-зелений
+      else colors[idx] = "#8FD19E";                            // найнижчі — світло-зелений
+    });
+    return colors;
+  }
+
+  // Підписи значень генерації над кожним стовпчиком — замінюють вісь Y
+  // (яку прибрано разом з лініями сітки за запитом Анни, 2026-07-07).
+  const genDataLabelsPlugin = {
+    id: "genDataLabels",
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      chart.data.datasets.forEach((dataset, di) => {
+        const meta = chart.getDatasetMeta(di);
+        meta.data.forEach((bar, i) => {
+          const value = dataset.data[i];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.fillStyle = "#1B1F1E";
+          ctx.font = "600 11px -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.fillText(fmtNum(value), bar.x, bar.y - 6);
+          ctx.restore();
+        });
+      });
+    },
+  };
+
   function render(model) {
     const now = new Date();
     model.meta.kpNumber = model.meta.kpNumber || defaultKpNumber(now);
@@ -300,17 +341,29 @@
     if (model.model.months.length && window.Chart) {
       const ctx = document.getElementById("kp-gen-chart");
       if (ctx) {
+        const genValues = model.model.months.map((m) => m.generation);
         new Chart(ctx, {
           type: "bar",
           data: {
             labels: model.model.months.map((m) => m.month),
-            datasets: [{ label: "Генерація, кВт·год", data: model.model.months.map((m) => m.generation), backgroundColor: "#2FA23A" }],
+            datasets: [{
+              label: "Генерація, кВт·год",
+              data: genValues,
+              backgroundColor: tierColors(genValues),
+              borderRadius: 4,
+              maxBarThickness: 46,
+            }],
           },
           options: {
             responsive: true,
+            layout: { padding: { top: 28 } },
             plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } },
+            scales: {
+              x: { grid: { display: false }, border: { display: false } },
+              y: { display: false, beginAtZero: true, grid: { display: false }, border: { display: false } },
+            },
           },
+          plugins: [genDataLabelsPlugin],
         });
       }
     }
