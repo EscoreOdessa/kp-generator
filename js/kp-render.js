@@ -65,9 +65,15 @@
       </div>
       ${hero ? `<div class="hero-img"><img src="${hero.url}"/></div><div class="caption">Розташування панелей на об'єкті${hero.name ? " — " + esc(hero.name) : ""}.</div>` : ""}
       <div class="stat-cards">
-        <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Встановлена потужність (за інвертором)</div></div>
+        <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність інверторної групи, ${m.tech.invertersQty || "—"} шт</div></div>
         <div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">${esc(m.tech.panelModel || "Панелі")}</div></div>
-        <div class="stat-card"><div class="num">${m.tech.invertersQty || "—"} шт</div><div class="lbl">${esc(m.tech.inverterModel || "Інвертори")}</div></div>
+        <!-- Потужність масиву фотомодулів — комірка B3 вкладки "Моделювання
+             Фін. показників роботи СЕС" (підпис "Потужність СЕС" у сусідній
+             комірці A3). Беремо вже готове значення m.model.capacityKw, яке
+             парситься саме з цієї комірки в sheets.js (parseModelSheet) —
+             замінює собою картку моделі гібридного інвертора (запит Анни,
+             2026-07-07). -->
+        <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність масиву фотомодулів</div></div>
         <div class="stat-card"><div class="num">${m.tech.batteryQty || "—"} шт</div><div class="lbl">${esc(m.tech.batteryModel || "Акумулятори")}</div></div>
       </div>
     </section>`;
