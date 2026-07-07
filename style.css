@@ -159,7 +159,7 @@ body{
 .meta-grid{
   display:grid;
   grid-template-columns: repeat(2,1fr);
-     gap: 14px;
+  gap: 14px;
   margin-bottom: 18px;
   font-size:12px;
 }
@@ -285,8 +285,8 @@ table.kp-table tr.grand td{
 .benefit-box .cap{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; opacity:.85; margin-bottom:4px; }
 .benefit-box .sub{ font-size:11px; opacity:.85; margin-top:6px; }
 
-.chart-wrap{ margin-top:18px; border:1px solid var(--line); border-radius:var(--radius); padding:14px; }
-.chart-wrap canvas{ max-height:220px; }
+.chart-wrap{ margin-top:46px; border:1px solid var(--line); border-radius:var(--radius); padding:22px 16px 16px; }
+.chart-wrap canvas{ max-height:340px; }
 
 .terms-list{ margin-top:8px; }
 .terms-list .t-row{ display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:12.5px;}
