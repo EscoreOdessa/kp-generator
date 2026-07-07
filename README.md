@@ -1,5 +1,7 @@
 # Генератор КП — ESCORE
 
+https://escoreodessa.github.io/kp-generator/
+
 Статичний сайт (HTML/CSS/JS, без збірки й сервера — той самий підхід, що й у
 `ses-calculator`), який формує брендовану комерційну пропозицію на СЕС з:
 
