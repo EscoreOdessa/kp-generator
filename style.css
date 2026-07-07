@@ -158,8 +158,8 @@ body{
 
 .meta-grid{
   display:grid;
-  grid-template-columns: repeat(4,1fr);
-  gap: 14px;
+  grid-template-columns: repeat(2,1fr);
+     gap: 14px;
   margin-bottom: 18px;
   font-size:12px;
 }
