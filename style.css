@@ -13,8 +13,11 @@
   --text-muted: #5B6864;
   --white: #FFFFFF;
   --radius: 10px;
-  --page-w: 794px;   /* A4 при 96dpi */
-  --page-h: 1123px;
+  /* A4 landscape при 96dpi (перевели весь шаблон з книжної на альбомну
+     орієнтацію 2026-07-07, щоб вмістити альбомні титульний слайд і слайд
+     "Чому саме ESCORE?" з референсної презентації — запит Анни). */
+  --page-w: 1123px;
+  --page-h: 794px;
   --page-pad: 46px;
 }
 
@@ -307,6 +310,49 @@ table.kp-table tr.grand td{
 .footer-dark .fcontact{ text-align:right; font-size:11.5px; line-height:1.6; }
 .disclaimer{ font-size:10px; color:var(--text-muted); margin-top:14px; line-height:1.5; }
 
+/* ---------- Сторінка 1 — титульний слайд (фото + напис) ----------
+   Взято з референсної презентації (запит Анни, 2026-07-07): фото сонячної
+   станції на заході на весь розворот, білий логотип, і великий напис, що
+   автоматично складається з типу станції (мережева/гібридна) та
+   потужності — фон завжди референсне фото заходу (не фото об'єкта). */
+.hero-page{ padding:0; overflow:hidden; }
+.hero-bg{
+  position:absolute; inset:0;
+  background-size:cover; background-position:center;
+}
+.hero-overlay{
+  position:absolute; inset:0;
+  background: linear-gradient(180deg, rgba(10,18,14,0) 38%, rgba(8,14,11,.78) 100%);
+}
+.hero-logo{ position:absolute; top:40px; left:46px; height:32px; z-index:2; }
+.hero-title{
+  position:absolute; left:46px; bottom:52px; z-index:2;
+  color:#fff; font-size:38px; font-weight:800; line-height:1.2;
+  max-width:60%; text-shadow: 0 2px 10px rgba(0,0,0,.25);
+}
+
+/* ---------- Сторінка 2 — "Чому саме ESCORE?" ----------
+   Контент 1:1 з референсної презентації (сертифікат + асоціації), але
+   перекладений з альбомної презентаційної розкладки під наш --- тепер теж
+   альбомний, але вужчий за пропорціями --- формат сторінки: банер зверху
+   на всю ширину, сертифікат зліва, пункти й сітка логотипів справа. */
+.why-banner{
+  background: var(--ink); color:#fff;
+  font-size:24px; font-weight:800;
+  padding:16px var(--page-pad);
+  margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 22px;
+}
+.why-body{ display:grid; grid-template-columns: 220px 1fr; gap:28px; }
+.why-cert img{ width:100%; border-radius:8px; border:1px solid var(--line); display:block; }
+.why-point{ display:flex; align-items:flex-start; gap:10px; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:14px; }
+.why-point .chk{
+  flex:none; width:22px; height:22px; border-radius:50%;
+  background: var(--tint); color:var(--green-dark);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;
+}
+.why-logos{ display:grid; grid-template-columns: repeat(3,1fr); gap:14px; margin-top:8px; }
+.why-logos img{ width:100%; height:64px; object-fit:contain; border-radius:6px; }
+
 /* ---------- Друк ---------- */
 @media print{
   body{ background:#fff; }
@@ -320,4 +366,4 @@ table.kp-table tr.grand td{
   }
   .kp-page:last-child{ page-break-after: auto; }
 }
-@page{ size: A4; margin: 0; }
+@page{ size: A4 landscape; margin: 0; }
