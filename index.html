@@ -4,28 +4,21 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Генератор КП — ESCORE</title>
-     <!-- Порожня іконка: без цього браузер сам підвантажує /favicon.ico з кореня
-          домену (escoreodessa.github.io), якого там нема, — і це 404 в консолі
-          при кожному відкритті сайту. Не впливає на роботу генератора. -->
-     <link rel="icon" href="data:," />
+<!-- Порожня іконка: без цього браузер сам підвантажує /favicon.ico з кореня
+     домену (escoreodessa.github.io), якого там нема, — і це 404 в консолі
+     при кожному відкритті сайту. Не впливає на роботу генератора. -->
+<link rel="icon" href="data:," />
 <link rel="stylesheet" href="style.css" />
+<!-- Обов'язково UMD-збірка (chart.umd.min.js), не chart.min.js: з версії 4.x
+     "chart.min.js" на cdnjs — це ES-модуль, і звичайний <script> без
+     type="module" впаде з "Cannot use import statement outside a module". -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
-     <!-- Навмисно старіша версія pdf.js (3.11.174, звичайний <script>, не ES-модуль):
-     працюють при відкритті сторінки напряму як file:// (Chrome блокує
-     import з локальних файлів). Ця версія працює і з file://, і після
-     розгортання на GitHub Pages. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-  if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-  }
-</script>
 </head>
 <body>
 
 <div class="form-shell no-print">
-  <h1>Генератор комерційної пропозиції — СЕС <span style="font-size:11px;color:#999;font-weight:normal;">(білд v4 — pdf.js без модулів)</span></h1>
-  <p class="sub">Вкажіть посилання на файл-розрахунок (Google Sheets), за бажанням додайте PDF з розрахунком генерації та зображення розташування панелей — і сформуйте брендоване КП.</p>
+  <h1>Генератор комерційної пропозиції — СЕС</h1>
+  <p class="sub">Вкажіть посилання на файл-розрахунок (Google Sheets), за бажанням додайте зображення розташування панелей — і сформуйте брендоване КП.</p>
 
   <div class="field">
     <label>Посилання на Google Sheet з розрахунком</label>
@@ -34,26 +27,12 @@
   </div>
 
   <div class="field">
-    <label><input type="checkbox" id="chk-demo" /> Використати демо-дані (Grand Marine) — не читати Google Sheets</label>
-  </div>
-
-  <div class="row2">
-    <div class="field">
-      <label>PDF з розрахунком генерації (опційно)</label>
-      <div class="dropzone" id="drop-genpdf">
-        <input type="file" id="in-genpdf" accept="application/pdf" />
-        <div class="dropzone-hint">Перетягніть PDF сюди або натисніть, щоб вибрати файл</div>
-        <div class="dropzone-filename" id="genpdf-filename"></div>
-      </div>
+    <label>Зображення розташування панелей / візуалізація</label>
+    <div class="dropzone" id="drop-images">
+      <input type="file" id="in-images" accept="image/*" multiple />
+      <div class="dropzone-hint">Перетягніть картинку(и) сюди або натисніть, щоб вибрати файл</div>
     </div>
-    <div class="field">
-      <label>Зображення розташування панелей / візуалізація</label>
-      <div class="dropzone" id="drop-images">
-        <input type="file" id="in-images" accept="image/*" multiple />
-        <div class="dropzone-hint">Перетягніть картинку(и) сюди або натисніть, щоб вибрати файл</div>
-      </div>
-      <div class="thumb-list" id="img-thumbs"></div>
-    </div>
+    <div class="thumb-list" id="img-thumbs"></div>
   </div>
 
   <div class="row3">
@@ -84,7 +63,6 @@
 <script src="js/logo.js"></script>
 <script src="js/config.js"></script>
 <script src="js/sheets.js"></script>
-<script src="js/pdf-report.js"></script>
 <script src="js/images.js"></script>
 <script src="js/kp-render.js"></script>
 <script src="js/app.js"></script>
