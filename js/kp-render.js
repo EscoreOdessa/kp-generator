@@ -342,10 +342,9 @@
     const tierSize = Math.ceil(n / 3);
     const colors = new Array(n);
     order.forEach((idx, rank) => {
-      if (rank < tierSize) colors[idx] = "#F5C518";           // найвищі — жовтий
-      else if (rank < tierSize * 2) colors[idx] = "#1F7A28";  // середні — темно-зелений
-      else colors[idx] = "#8FD19E";                            // найнижчі — світло-зелений
-    });
+            if (rank < tierSize) colors[idx] = "#F5C518";           // найвищі — жовтий
+      else if (rank < tierSize * 2) colors[idx] = "#05554B";  // середні — фірмовий зелений (з логотипа)
+      else colors[idx] = "#82CFC4";                            // найнижчі — світлий відтінок фірмового зеленого;
     return colors;
   }
 
