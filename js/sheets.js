@@ -42,7 +42,13 @@
   }
   function numeric(v) {
     if (v == null) return null;
-    let s = String(v).replace(/[^0-9,.\-]/g, "");
+    let s = String(v);
+    // Валютні префікси на кшталт "грн." самі містять крапку, яку легко
+    // переплутати з десятковим роздільником ("грн.12.34" без цієї стрічки
+    // ставало б "0.12" замість "12.34") — прибираємо весь буквено-символьний
+    // префікс одразу, до першої цифри чи мінуса.
+    s = s.replace(/^[^\d\-]*/, "");
+    s = s.replace(/[^0-9,.\-]/g, "");
     if (s === "" || s === "-") return null;
     // У цих таблицях кома завжди роздільник тисяч (напр. "$3,083.03",
     // "1,577"), крапка — десяткова. Тому кому просто прибираємо, а не
@@ -181,9 +187,32 @@
       }
     }
 
+    // ---- Точні комірки для сторінки "Фінансові показники" (запит Анни,
+    // 2026-07-08) ----
+    // На відміну від решти парсера (пошук за текстом підпису), ці 4
+    // показники + помісячна економія читаються за фіксованими адресами
+    // комірок — так попросила Анна, бо верхня панель показників на цій
+    // вкладці має завжди однакову розкладку.
+    const cell = (r, c) => (rows[r] && rows[r][c] != null ? rows[r][c] : null);
+    const annualSavings100 = numeric(cell(0, 7));   // H1 — Річна економія, 100% споживання
+    const paybackAtTariff = numeric(cell(0, 9));    // J1 — Термін окупності при діючому тарифі
+    const totalEffect30y = numeric(cell(52, 1));    // B53 — Загальний економічний ефект за 30 років
+    const lcoe30Uah = numeric(cell(1, 7));          // H2 — LCOE30, з ПДВ, грн/кВт·год
+
+    // Помісячна економія (стовпець "Дохід", D7:D18) з підписами місяців
+    // (A7:A18) — окремо від "months" вище (той масив — генерація, кВт·год,
+    // не грошова економія).
+    const monthlySavings = [];
+    for (let r = 6; r <= 17; r++) {
+      const label = cell(r, 0);
+      if (!label) continue;
+      monthlySavings.push({ month: String(label).trim(), amount: numeric(cell(r, 3)) });
+    }
+
     return {
       stationCostUsd, costPerKw, capacityKw, annualGenKwh, annualGenPerKw,
       gen30y, income30y, lcoe30, annualSavingsUsd, paybackYears, tariff, months,
+      annualSavings100, paybackAtTariff, totalEffect30y, lcoe30Uah, monthlySavings,
     };
   }
 
@@ -202,8 +231,11 @@
   window.KpSheets = { loadCalcFromSheet, extractSpreadsheetId, parsePdvSheet, parseModelSheet };
 })();
 
-// Окремо: назва файлу в Google Sheets (використовується як підказка для
-// поля "Об'єкт", якщо менеджер його не заповнив вручну).
+// Окремо: назва файлу в Google Sheets. Раніше використовувалась як
+// підказка для поля "Об'єкт", але назва файлу часто службова/технічна —
+// тепер замість неї беремо комірку A1 вкладки SHEET_TAB_OBJECT_NAME (див.
+// getObjectNameFromSheet нижче). Функцію лишаємо про запас (може знадобитись
+// деінде), просто вона більше не викликається з app.js.
 window.KpSheets.getSpreadsheetTitle = async function (sheetUrlOrId) {
   const id = window.KpSheets.extractSpreadsheetId(sheetUrlOrId);
   const key = window.KP_CONFIG.GOOGLE_API_KEY;
@@ -215,17 +247,17 @@ window.KpSheets.getSpreadsheetTitle = async function (sheetUrlOrId) {
 };
 
 // Назва об'єкта береться з комірки A1 вкладки "Кошторис_Наявність
-// обладнання" (KP_CONFIG.SHEET_TAB_OBJECT_NAME) — саме туди менеджери вписують
-// робочу назву об'єкта (напр. "№ Гранд марін (попередньо)").
+// обладнання" (KP_CONFIG.SHEET_TAB_OBJECT_NAME) — саме туди менеджери
+// вписують робочу назву об'єкта (напр. "№ Гранд марин (попередньо)").
 window.KpSheets.getObjectNameFromSheet = async function (sheetUrlOrId) {
-    const id = window.KpSheets.extractSpreadsheetId(sheetUrlOrId);
-    const key = window.KP_CONFIG.GOOGLE_API_KEY;
-    const sheetName = window.KP_CONFIG.SHEET_TAB_OBJECT_NAME;
-    const range = encodeURIComponent(`'${sheetName}'!A1`);
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?key=${key}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const json = await res.json();
-    const v = json.values && json.values[0] && json.values[0][0];
-    return v ? String(v).trim() : null;
+  const id = window.KpSheets.extractSpreadsheetId(sheetUrlOrId);
+  const key = window.KP_CONFIG.GOOGLE_API_KEY;
+  const sheetName = window.KP_CONFIG.SHEET_TAB_OBJECT_NAME;
+  const range = encodeURIComponent(`'${sheetName}'!A1`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?key=${key}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const json = await res.json();
+  const v = json.values && json.values[0] && json.values[0][0];
+  return v ? String(v).trim() : null;
 };
