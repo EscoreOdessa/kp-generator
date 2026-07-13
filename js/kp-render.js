@@ -165,106 +165,108 @@
     </section>`;
   }
 
-  // ---------- Сторінка 02 — фінансові показники ----------
-  // Повністю перероблена сторінка (запит Анни, 2026-07-08): була "Технічне
-  // рішення" (список обладнання), стала "Фінансові показники" — 5 цифр,
-  // які читаються за ФІКСОВАНИМИ адресами комірок вкладки "Моделювання
-  // Фін. показників роботи СЕС" (не за текстом підпису, як решта парсера —
-  // так навмисно попросила Анна, бо верхня панель показників там завжди
-  // однакової розкладки): H1, J1, B53, H2, і місячна економія A7:A18/D7:D18
-  // (див. sheets.js parseModelSheet). Перемикач місяця — реальний <select>,
-  // прихований на друку класом .no-print, значення підмінюється на клієнті
-  // без повторного звернення до Google Sheets (див. wireFinMonthSelect()
-  // нижче, викликається з render()).
-  const UK_MONTHS = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
-    "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
-
+  // ---------- Сторінка 3 — технічне рішення ----------
   function pageTech(m) {
-    const monthly = m.model.monthlySavings || [];
-    const nowMonthName = UK_MONTHS[new Date().getMonth()];
-    let defaultIdx = monthly.findIndex((x) => x.month === nowMonthName);
-    if (defaultIdx < 0) defaultIdx = 0;
-    const year = new Date().getFullYear();
-    const defaultItem = monthly[defaultIdx];
-    const optionsHtml = monthly
-      .map((x, i) => `<option value="${i}"${i === defaultIdx ? " selected" : ""}>${esc(x.month)}</option>`)
-      .join("");
+    const items = m.tech.specItems;
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">02</span> Фінансові показники</div>
-      <div class="kp-body">
-        <p>Нижче — ключові фінансові показники проєкту, розраховані на основі поточного тарифу на електроенергію
-        та фактичних параметрів станції. Вони дозволяють оцінити реальну економічну вигоду від впровадження СЕС
-        як у короткостроковій, так і в довгостроковій перспективі.</p>
+      <div class="section-title"><span class="num-badge">02</span> Технічне рішення</div>
+      <div class="split-list">
+        ${items.map((it) => `<div class="spec-item"><b>${esc(it.label)}</b>${esc(it.value)}</div>`).join("")}
       </div>
-      <div class="benefit-strip">
-        <div class="benefit-box green">
-          <div class="cap">Річна економія, за умови 100% споживання згенерованої е/е</div>
-          <div class="big">${m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : "—"}</div>
-        </div>
-        <div class="benefit-box dark">
-          <div class="cap">Строк окупності проєкту при діючому тарифі</div>
-          <div class="big">${m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : "—"}</div>
-        </div>
-      </div>
-      <div class="fin-month-card">
-        <div>
-          <div class="lbl">Потенційна місячна економія, за умови 100% споживання, у
-            <span id="fin-month-label">${defaultItem ? esc(defaultItem.month) : "—"}</span> ${year} р.</div>
-          <div class="val" id="fin-month-value">${defaultItem && defaultItem.amount != null ? fmtUsd(defaultItem.amount) : "—"}</div>
-        </div>
-        ${monthly.length ? `<select id="fin-month-select" class="no-print">${optionsHtml}</select>` : ""}
-      </div>
-      <div class="stat-cards cols-2">
-        <div class="stat-card">
-          <div class="num">${m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : "—"}</div>
-          <div class="lbl">Загальний економічний ефект від впровадження СЕС за 30 років експлуатації</div>
-        </div>
-        <div class="stat-card">
-          <div class="num">${m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн / 1 кВт·г" : "—"}</div>
-          <div class="lbl">LCOE30 — собівартість 1 кВт·год сонячної електроенергії від СЕС, з ПДВ</div>
-        </div>
-      </div>
+      ${m.pdvReportImage ? `<div class="hero-img" style="margin-top:22px;"><img src="${m.pdvReportImage}"/></div><div class="caption">Додаток: розрахунок генерації електроенергії.</div>` : ""}
     </section>`;
   }
 
-  // Підміна значення картки "Потенційна місячна економія" при виборі іншого
-  // місяця у випадаючому списку — дані вже завантажені (monthlySavings),
-  // повторний запит до Google Sheets не потрібен.
-  function wireFinMonthSelect(model) {
-    const sel = document.getElementById("fin-month-select");
-    const monthly = model.model.monthlySavings || [];
-    if (!sel || !monthly.length) return;
-    sel.addEventListener("change", () => {
-      const item = monthly[Number(sel.value)];
-      const labelEl = document.getElementById("fin-month-label");
-      const valEl = document.getElementById("fin-month-value");
-      if (!item || !labelEl || !valEl) return;
-      labelEl.textContent = item.month;
-      valEl.textContent = item.amount != null ? fmtUsd(item.amount) : "—";
+  // ---------- Сторінка 4 — бюджет реалізації ----------
+  // Структура — 1:1 з референсного слайду "Бюджет реалізації" (запит
+  // Анни, 2026-07-13): три групи (Обладнання / Витратні матеріали /
+  // Роботи), кожна зі своєю мержованою колонкою підсумку. Позиції групи
+  // "Обладнання" читаються ДИНАМІЧНО з категорії "Основне технічне
+  // обладнання та система кріплення" вкладки ПДВ (назва — колонка B,
+  // кількість — колонка C, як завжди в цьому проєкті — пошук за текстом,
+  // не за координатами). "Витратні матеріали" й "Роботи" — фіксований
+  // перелік найменувань зі стандартного шаблону (кількість завжди 1,
+  // не з файлу — так попросила Анна). Підсумкові суми (Вартість без ПДВ
+  // по кожній групі, Разом без ПДВ, Загальна вартість з ПДВ) — навмисний
+  // виняток із "пошуку за текстом": читаються за фіксованими адресами
+  // комірок вкладки ПДВ (L2 / L12 / L22 / L32 / E44) — те саме рішення,
+  // що й для сторінки "Фінансові показники" (див. sheets.js,
+  // parseBudgetCells), бо в стандартному шаблоні файла-розрахунку ця
+  // розкладка завжди однакова.
+  const BUDGET_MATERIALS = [
+    "PV кабель для підключення фотомодулів, 6мм, Німеччина",
+    "Автоматика захисту змінного струму",
+    "Кабельно-провідникова продукція + конектори MC4",
+    "Автоматика захисту фотоелектричних модулів (постійний струм)",
+    "Витратні матеріали",
+  ];
+  const BUDGET_WORKS = [
+    "Будівельно-монтажні роботи",
+    "Електро-монтажні роботи",
+    "Прокладка електричного кабелю",
+    "Підйомні механізми",
+    "Доставка обладнання",
+  ];
+
+  function findBudgetEquipItems(pdv) {
+    const cat = pdv.categories.find((c) => {
+      const n = c.name.toLowerCase();
+      return n.includes("техн") && n.includes("облад");
     });
+    return cat ? cat.items : [];
   }
 
-  // ---------- Сторінка 4 — номенклатура ----------
-  function pageNomenclature(m) {
-    const rows = [];
-    m.pdv.categories.forEach((cat) => {
-      const subtotal = cat.items.reduce((s, it) => s + it.lineNetto, 0);
-      rows.push(`<tr class="cat"><td>${esc(cat.code)}</td><td>${esc(cat.name)}</td><td></td><td class="num"></td><td class="num">${fmtUsd(subtotal)}</td></tr>`);
-      cat.items.forEach((it) => {
-        rows.push(`<tr><td>${esc(it.code)}</td><td>${esc(it.name)}</td><td class="num">${fmtNum(it.qty)}</td><td class="num">${fmtUsd(it.unitNetto)}</td><td class="num">${fmtUsd(it.lineNetto)}</td></tr>`);
-      });
-    });
+  function budgetGroupRows(items, getName, getQty, priceVal, catLabel, groupClass) {
+    if (!items.length) return "";
+    return items.map((it, i) => {
+      const name = getName(it);
+      const qty = getQty(it);
+      const first = i === 0;
+      return `<tr class="${groupClass}">
+        ${first ? `<td class="budget-cat" rowspan="${items.length}"><span>${esc(catLabel)}</span></td>` : ""}
+        <td>${esc(name)}</td>
+        <td class="num">${qty == null ? "—" : fmtNum(qty)}</td>
+        ${first ? `<td class="num budget-price" rowspan="${items.length}">${fmtUsd(priceVal)}</td>` : ""}
+      </tr>`;
+    }).join("");
+  }
+
+  function pageBudget(m) {
+    const equip = findBudgetEquipItems(m.pdv);
+    const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
+    const b = m.budget || {};
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">03</span> Номенклатура товарів і послуг</div>
-      <table class="kp-table">
-        <thead><tr><th>№</th><th>Найменування</th><th class="num">К-сть</th><th class="num">Ціна за од., $</th><th class="num">Сума, $</th></tr></thead>
-        <tbody>${rows.join("")}</tbody>
-      </table>
-      <div class="caption">* Ціни вказано в доларах США (USD), без ПДВ. Обсяги та специфікація уточнюються за результатами робочого проєктування.</div>
+      <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
+      <div class="budget-layout">
+        <table class="budget-table">
+          <thead>
+            <tr>
+              <th colspan="2">Найменування</th>
+              <th class="num">Кількість</th>
+              <th class="num">Вартість<br/>без ПДВ, $</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${budgetGroupRows(equipRows, (it) => it.name, (it) => it.qty, b.equipmentCost, "Обладнання", "grp-equip")}
+            ${budgetGroupRows(BUDGET_MATERIALS, (n) => n, () => 1, b.materialsCost, "Витратні матеріали", "grp-mat")}
+            ${budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works")}
+          </tbody>
+          <tfoot>
+            <tr class="sum"><td colspan="3">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
+            <tr class="sum"><td colspan="3">ПДВ</td><td class="num">${fmtUsd(b.vat)}</td></tr>
+            <tr class="sum grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num">${fmtUsd(b.grossTotal)}</td></tr>
+          </tfoot>
+        </table>
+        <aside class="budget-notes">
+          <div class="note"><span class="chk">✓</span><div><b>Остаточна вартість</b> проєкту затверджується після узгодження технічних рішень</div></div>
+          <div class="note"><span class="chk">✓</span><div><b>Оплата</b> здійснюється в національній валюті за комерційним курсом на дату виконання платежу</div></div>
+          <div class="note"><span class="chk">✓</span><div>Пропозиція дійсна протягом <b>3 днів</b></div></div>
+        </aside>
+      </div>
     </section>`;
   }
 
@@ -409,9 +411,9 @@
     const tierSize = Math.ceil(n / 3);
     const colors = new Array(n);
     order.forEach((idx, rank) => {
-      if (rank < tierSize) colors[idx] = "#F5C518";           // найвищі — жовтий
+            if (rank < tierSize) colors[idx] = "#F5C518";           // найвищі — жовтий
       else if (rank < tierSize * 2) colors[idx] = "#05554B";  // середні — фірмовий зелений (з логотипа)
-      else colors[idx] = "#82CFC4";                            // найнижчі — світлий відтінок фірмового зеленого
+      else colors[idx] = "#82CFC4";                            // найнижчі — світлий відтінок фірмового зеленого;
     });
     return colors;
   }
@@ -452,7 +454,7 @@
       pageCover(model),
       pageAbout(model),
       pageTech(model),
-      pageNomenclature(model),
+      pageBudget(model),
       pageCost(model),
       pageEconomics(model),
       pageTerms(model),
@@ -461,8 +463,6 @@
     const holder = document.getElementById("kp-doc");
     holder.innerHTML = html;
     holder.classList.add("ready");
-
-    wireFinMonthSelect(model);
 
     if (model.model.months.length && window.Chart) {
       const ctx = document.getElementById("kp-gen-chart");
