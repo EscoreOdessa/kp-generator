@@ -467,6 +467,25 @@ table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 .chart-wrap{ margin-top:46px; border:1px solid var(--line); border-radius:var(--radius); padding:22px 16px 16px; }
 .chart-wrap canvas{ max-height:340px; }
 
+/* ---------- Сторінка "05" — порівняння погодинної генерації ----------
+   Лінійний графік Chart.js з 4 місяцями-прикладами (січень/квітень/
+   липень/жовтень), джерело — окремий файл із сезонними погодинними
+   графіками (js/seasonal.js). Сторінка — flex-колонка на всю висоту
+   (--page-h, той самий патерн, що й .why-page/.shading-page), а
+   .seasonal-chart-wrap — flex:1, щоб графік займав увесь залишок висоти
+   під заголовком, а не тулився зверху з порожнечею знизу. */
+.seasonal-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
+.seasonal-chart-wrap{
+  flex: 1;
+  min-height: 0;
+  margin-top: 10px;
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 20px 10px;
+  position: relative;
+}
+.seasonal-chart-wrap canvas{ width:100% !important; height:100% !important; }
+
 .terms-list{ margin-top:8px; }
 .terms-list .t-row{ display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:12.5px;}
 .terms-list .t-row b{ min-width:150px; color:var(--ink); }
