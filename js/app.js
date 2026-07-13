@@ -32,6 +32,22 @@
       const imgFiles = document.getElementById("in-images").files;
       const images = await KpImages.readAll(imgFiles);
 
+      // Звіт PvSyst.pdf з Google Drive (опційно) — сторінка "04" КП.
+      // Якщо поле порожнє або файл не вдалось завантажити/відрендерити,
+      // сторінка просто не додається до документа (не критична помилка,
+      // решта КП формується як завжди).
+      let pvsystImage = null;
+      const pvsystUrl = document.getElementById("in-pvsyst-url").value.trim();
+      if (pvsystUrl) {
+        try {
+          setStatus("Завантажуємо звіт PVsyst.pdf з Google Drive...");
+          const buf = await KpDrive.fetchDriveFileArrayBuffer(pvsystUrl);
+          pvsystImage = await KpPdfReport.renderPdfPageToDataUrl(buf, 5);
+        } catch (e) {
+          console.warn("PVsyst.pdf: не вдалось завантажити/відрендерити (не критично):", e);
+        }
+      }
+
       let objectName = document.getElementById("in-object").value.trim();
       if (!objectName) {
         try {
@@ -61,6 +77,7 @@
         pdv,
         model: modelData,
         budget: data.budget,
+        pvsystImage,
       };
 
       KpRender.render(model);
