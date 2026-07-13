@@ -361,7 +361,7 @@
   function pageShading(m) {
     if (!m.pvsystImage) return "";
     return `
-    <section class="kp-page">
+    <section class="kp-page shading-page">
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">04</span> Ми створили <b class="accent">імітаційну модель вашої СЕС</b> та врахували:</div>
       <div class="shading-layout">
