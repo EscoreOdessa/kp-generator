@@ -18,6 +18,20 @@
      збірки pdf.js — лише ES-модулі й ламаються під звичайним <script>
      без type="module" (та сама причина, що й з Chart.js вище). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- html2canvas + jsPDF — рендер КП у PDF "як є" на екрані (запит Анни,
+     2026-07-13, після двох невдалих спроб полагодити нативний друк
+     браузера: перша сторінка друкувалась порожньою, а сторінки з
+     CSS Grid/довгими таблицями "перетікали" на сирітські сторінки без
+     заголовка — @media print у різних браузерах поводиться непередбачувано
+     і чіпляти баг за багом було ненадійно). Кожна .kp-page рендериться
+     html2canvas() у картинку ТОЧНО як показано на екрані (жодних правил
+     @media print не задіяно), і картинки вставляються в PDF одна на
+     сторінку через jsPDF — це гарантує, що PDF завжди виглядає так само,
+     як прев'ю на екрані, незалежно від того, як конкретний браузер друкує
+     CSS. Кнопка "Друк / зберегти як PDF" тепер викликає це замість
+     window.print() (див. js/app.js, handleSavePdf()). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
   window.addEventListener("DOMContentLoaded", function () {
     if (window.pdfjsLib) {
