@@ -42,7 +42,7 @@
         try {
           setStatus("Завантажуємо звіт PVsyst.pdf з Google Drive...");
           const buf = await KpDrive.fetchDriveFileArrayBuffer(pvsystUrl);
-          pvsystImage = await KpPdfReport.renderPdfPageToDataUrl(buf, 5);
+          pvsystImage = await KpPdfReport.renderPdfPageToDataUrl(buf, KP_CONFIG.PVSYST_PAGE || 5, KP_CONFIG.PVSYST_CROP);
         } catch (e) {
           console.warn("PVsyst.pdf: не вдалось завантажити/відрендерити (не критично):", e);
         }
