@@ -495,7 +495,13 @@ table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
    марджинами calc(-1*var(--page-pad)), що й у .why-banner), а не
    обмежені стандартним --page-pad, як решта контентних сторінок. */
 .warranty-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
-.warranty-page .logo{ height:28px; display:block; margin-bottom:24px; }
+/* align-self:flex-start потрібен обов'язково: .warranty-page — flex-колонка
+   (display:flex; flex-direction:column), і БЕЗ цього логотип як прямий
+   flex-item розтягується на всю ширину контейнера (align-items:stretch за
+   замовчуванням для flex-колонки — це крос-вісь = горизонталь), псуючи
+   пропорції картинки (виявлено при живій перевірці 2026-07-13: логотип
+   виходив на всю ширину сторінки замість маленького в кутку). */
+.warranty-page .logo{ height:28px; display:block; margin-bottom:24px; align-self:flex-start; }
 .warranty-banner{
   background: var(--green); color:#fff;
   font-size:22px; font-weight:800;
