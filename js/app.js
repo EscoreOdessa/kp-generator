@@ -60,6 +60,7 @@
         images,
         pdv,
         model: modelData,
+        budget: data.budget,
       };
 
       KpRender.render(model);
