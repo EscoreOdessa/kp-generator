@@ -165,18 +165,85 @@
     </section>`;
   }
 
-  // ---------- Сторінка 3 — технічне рішення ----------
+  // ---------- Сторінка 02 — фінансові показники ----------
+  // Повністю перероблена сторінка (запит Анни, 2026-07-08): була "Технічне
+  // рішення" (список обладнання), стала "Фінансові показники" — 5 цифр,
+  // які читаються за ФІКСОВАНИМИ адресами комірок вкладки "Моделювання
+  // Фін. показників роботи СЕС" (не за текстом підпису, як решта парсера —
+  // так навмисно попросила Анна, бо верхня панель показників там завжди
+  // однакової розкладки): H1, J1, B53, H2, і місячна економія A7:A18/D7:D18
+  // (див. sheets.js parseModelSheet). Перемикач місяця — реальний <select>,
+  // прихований на друку класом .no-print, значення підмінюється на клієнті
+  // без повторного звернення до Google Sheets (див. wireFinMonthSelect()
+  // нижче, викликається з render()).
+  const UK_MONTHS = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
+    "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+
   function pageTech(m) {
-    const items = m.tech.specItems;
+    const monthly = m.model.monthlySavings || [];
+    const nowMonthName = UK_MONTHS[new Date().getMonth()];
+    let defaultIdx = monthly.findIndex((x) => x.month === nowMonthName);
+    if (defaultIdx < 0) defaultIdx = 0;
+    const year = new Date().getFullYear();
+    const defaultItem = monthly[defaultIdx];
+    const optionsHtml = monthly
+      .map((x, i) => `<option value="${i}"${i === defaultIdx ? " selected" : ""}>${esc(x.month)}</option>`)
+      .join("");
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">02</span> Технічне рішення</div>
-      <div class="split-list">
-        ${items.map((it) => `<div class="spec-item"><b>${esc(it.label)}</b>${esc(it.value)}</div>`).join("")}
+      <div class="section-title"><span class="num-badge">02</span> Фінансові показники</div>
+      <div class="kp-body">
+        <p>Нижче — ключові фінансові показники проєкту, розраховані на основі поточного тарифу на електроенергію
+        та фактичних параметрів станції. Вони дозволяють оцінити реальну економічну вигоду від впровадження СЕС
+        як у короткостроковій, так і в довгостроковій перспективі.</p>
       </div>
-      ${m.pdvReportImage ? `<div class="hero-img" style="margin-top:22px;"><img src="${m.pdvReportImage}"/></div><div class="caption">Додаток: розрахунок генерації електроенергії.</div>` : ""}
+      <div class="benefit-strip">
+        <div class="benefit-box green">
+          <div class="cap">Річна економія, за умови 100% споживання згенерованої е/е</div>
+          <div class="big">${m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : "—"}</div>
+        </div>
+        <div class="benefit-box dark">
+          <div class="cap">Строк окупності проєкту при діючому тарифі</div>
+          <div class="big">${m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : "—"}</div>
+        </div>
+      </div>
+      <div class="fin-month-card">
+        <div>
+          <div class="lbl">Потенційна місячна економія, за умови 100% споживання, у
+            <span id="fin-month-label">${defaultItem ? esc(defaultItem.month) : "—"}</span> ${year} р.</div>
+          <div class="val" id="fin-month-value">${defaultItem && defaultItem.amount != null ? fmtUsd(defaultItem.amount) : "—"}</div>
+        </div>
+        ${monthly.length ? `<select id="fin-month-select" class="no-print">${optionsHtml}</select>` : ""}
+      </div>
+      <div class="stat-cards cols-2">
+        <div class="stat-card">
+          <div class="num">${m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : "—"}</div>
+          <div class="lbl">Загальний економічний ефект від впровадження СЕС за 30 років експлуатації</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">${m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн / 1 кВт·г" : "—"}</div>
+          <div class="lbl">LCOE30 — собівартість 1 кВт·год сонячної електроенергії від СЕС, з ПДВ</div>
+        </div>
+      </div>
     </section>`;
+  }
+
+  // Підміна значення картки "Потенційна місячна економія" при виборі іншого
+  // місяця у випадаючому списку — дані вже завантажені (monthlySavings),
+  // повторний запит до Google Sheets не потрібен.
+  function wireFinMonthSelect(model) {
+    const sel = document.getElementById("fin-month-select");
+    const monthly = model.model.monthlySavings || [];
+    if (!sel || !monthly.length) return;
+    sel.addEventListener("change", () => {
+      const item = monthly[Number(sel.value)];
+      const labelEl = document.getElementById("fin-month-label");
+      const valEl = document.getElementById("fin-month-value");
+      if (!item || !labelEl || !valEl) return;
+      labelEl.textContent = item.month;
+      valEl.textContent = item.amount != null ? fmtUsd(item.amount) : "—";
+    });
   }
 
   // ---------- Сторінка 4 — бюджет реалізації ----------
@@ -463,6 +530,8 @@
     const holder = document.getElementById("kp-doc");
     holder.innerHTML = html;
     holder.classList.add("ready");
+
+    wireFinMonthSelect(model);
 
     if (model.model.months.length && window.Chart) {
       const ctx = document.getElementById("kp-gen-chart");
