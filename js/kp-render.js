@@ -1,8 +1,10 @@
-// kp-render.js — будує розмітку комерційної пропозиції (до 10 сторінок
-// А4, альбомна орієнтація — сторінка "04" (PvSyst) опційна і з'являється
-// лише якщо вказано посилання на звіт)
+// kp-render.js — будує розмітку комерційної пропозиції (до 11 сторінок
+// А4, альбомна орієнтація — сторінки "04" (PvSyst) і "05" (сезонні
+// погодинні графіки) опційні й з'являються лише якщо вказано відповідне
+// посилання)
 // з даних, зібраних у app.js (таблиця розрахунків + PDF генерації +
-// зображення), і малює діаграму помісячної генерації через Chart.js.
+// зображення), і малює діаграми помісячної/погодинної генерації через
+// Chart.js.
 
 (function () {
   const fmtUsd = (n) =>
@@ -373,7 +375,77 @@
     </section>`;
   }
 
-  // ---------- Сторінка 05 — вартість проєкту ----------
+  // ---------- Сторінка 05 — порівняння погодинної генерації ----------
+  // Лінійний графік Chart.js із 4 місяцями-прикладами — січень, квітень,
+  // липень, жовтень (фіксований набір, запит Анни, 2026-07-13) — щоб
+  // показати, як форма кривої погодинної генерації змінюється по сезонах
+  // (низький пік взимку, широкий і високий пік влітку). Джерело даних —
+  // окремий файл-розрахунок із сезонними погодинними графіками (посилання
+  // на стартовій сторінці, парситься через js/seasonal.js: шукає таблицю
+  // "0H..23H" на будь-якій вкладці файлу, а не за фіксованою назвою
+  // вкладки, бо різні файли-розрахунки називають вкладку по-різному). Якщо
+  // посилання не вказано або в файлі не знайдено очікуваної таблиці —
+  // сторінка не додається взагалі (той самий "необов'язково, fail-soft"
+  // підхід, що й у "04").
+  function pageSeasonal(m) {
+    if (!m.seasonalHourly || !m.seasonalHourly.series.length) return "";
+    return `
+    <section class="kp-page seasonal-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">05</span> Порівняння погодинної генерації СЕС на прикладі січня / квітня / липня / жовтня</div>
+      <div class="seasonal-chart-wrap"><canvas id="kp-seasonal-chart"></canvas></div>
+    </section>`;
+  }
+
+  // Кольори ліній графіка сезонного порівняння — по одному відтінку на
+  // місяць, підібрані як асоціація з порою року (зима — приглушений
+  // тіл-блакитний, весна — фірмовий зелений, літо — сонячний жовтий,
+  // осінь — теплий оранжевий), а не довільно.
+  const SEASONAL_COLORS = { jan: "#4C7A72", apr: "#05554B", jul: "#F5C518", oct: "#B3592E" };
+
+  function wireSeasonalChart(model) {
+    const seasonal = model.seasonalHourly;
+    if (!seasonal || !seasonal.series.length || !window.Chart) return;
+    const ctx = document.getElementById("kp-seasonal-chart");
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: seasonal.hours.map((h) => h + "H"),
+        datasets: seasonal.series.map((s) => ({
+          label: s.label,
+          data: s.data,
+          borderColor: SEASONAL_COLORS[s.key] || "#05554B",
+          backgroundColor: SEASONAL_COLORS[s.key] || "#05554B",
+          borderWidth: 2.5,
+          pointRadius: 0,
+          tension: 0.35,
+        })),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "top",
+            labels: { color: "#1B1F1E", font: { size: 12, weight: "600" }, usePointStyle: true, boxWidth: 8 },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, border: { display: false }, ticks: { color: "#5B6864", font: { size: 10 } } },
+          y: {
+            beginAtZero: true,
+            grid: { color: "#E1E6E2" },
+            border: { display: false },
+            ticks: { color: "#5B6864", font: { size: 10 } },
+            title: { display: true, text: "кВт", color: "#5B6864" },
+          },
+        },
+      },
+    });
+  }
+
+  // ---------- Сторінка 06 — вартість проєкту ----------
   // Підсумкові цифри тут навмисно беруться напряму з вкладки "Моделювання"
   // (рядки 1-3: "Вартість СЕС", "Вартість 1 кВт СЕС", "Потужність СЕС",
   // "Термін окупності") — це вже готовий, узгоджений розрахунок автора
@@ -391,7 +463,7 @@
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">05</span> Вартість проєкту</div>
+      <div class="section-title"><span class="num-badge">06</span> Вартість проєкту</div>
       <div class="cost-box">
         <div class="cost-row"><span>Бюджет проєкту, нетто без ПДВ</span><b>${fmtUsd(netto)}</b></div>
         <div class="cost-row total"><span>Вартість СЕС — РАЗОМ до сплати</span><span>${fmtUsd(total)}</span></div>
@@ -408,7 +480,7 @@
     </section>`;
   }
 
-  // ---------- Сторінка 06 — економічна вигода (лише грошові показники) ----------
+  // ---------- Сторінка 07 — економічна вигода (лише грошові показники) ----------
   // Технічні показники генерації і діаграма перенесені на сторінку "Про
   // проєкт" (pageAbout) — тут навмисно лишили тільки фінанси.
   function pageEconomics(m) {
@@ -423,7 +495,7 @@
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">06</span> Економічна вигода та проста окупність</div>
+      <div class="section-title"><span class="num-badge">07</span> Економічна вигода та проста окупність</div>
       <div class="kp-body"><p>Розрахунок виконано з припущення, що станція повністю віддає згенеровану електроенергію на потреби
       об'єкта, заміщуючи купівлю електроенергії у постачальника за тарифом ≈ $${tariff}/кВт·год.</p></div>
       <div class="stat-cards">
@@ -440,13 +512,13 @@
     </section>`;
   }
 
-  // ---------- Сторінка 07 — умови + футер ----------
+  // ---------- Сторінка 08 — умови + футер ----------
   function pageTerms(m) {
     const c = m.meta.company;
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">07</span> Що входить та умови</div>
+      <div class="section-title"><span class="num-badge">08</span> Що входить та умови</div>
       <div class="terms-list">
         <div class="t-row"><b>Повний цикл «під ключ»</b> проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</div>
         <div class="t-row"><b>Термін реалізації</b> орієнтовно ${esc(m.overrides.leadTimeWeeks)} тижнів від передоплати.</div>
@@ -559,6 +631,7 @@
       pageTech(model),
       pageBudget(model),
       pageShading(model),
+      pageSeasonal(model),
       pageCost(model),
       pageEconomics(model),
       pageTerms(model),
@@ -569,6 +642,7 @@
     holder.classList.add("ready");
 
     wireFinMonthSelect(model);
+    wireSeasonalChart(model);
 
     if (model.model.months.length && window.Chart) {
       const ctx = document.getElementById("kp-gen-chart");
