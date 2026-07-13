@@ -53,6 +53,16 @@
   // не залежить від даних розрахунку. Перекладено з альбомної презентації
   // під наш (тепер теж альбомний) формат сторінки — сертифікат зліва,
   // пункти й сітка логотипів справа (запит Анни, 2026-07-07).
+  // Оновлено 2026-07-13 (запит Анни): сітка логотипів тепер 2 колонки x
+  // 3 рядки (було 3x2) — плашки виходять більшими й краще заповнюють
+  // сторінку. Кожен логотип обгорнуто в .logo-tile — однакова
+  // фіксована висота-рамка для всіх плашок, щоб вони виглядали
+  // однакового розміру незалежно від пропорцій вихідного файлу.
+  // "СУП" (Спілка Українських Підприємців) — єдина плашка, що раніше
+  // була темно-синім/чорним фото з блакитними літерами (погано читалась,
+  // не пасувала до решти білих плашок). Замінено на чистий текстовий
+  // блок (синій текст на білому) замість растрового файлу — не залежить
+  // від бінарних асетів, легко підтримувати.
   function pageWhyEscore() {
     return `
     <section class="kp-page why-page">
@@ -63,12 +73,15 @@
           <div class="why-point"><span class="chk">✓</span> Ми маємо СЕРТИФІКАТ на систему управління якістю</div>
           <div class="why-point"><span class="chk">✓</span> Ми є членами таких асоціацій:</div>
           <div class="why-logos">
-            <img src="assets/logo-women.jpg" alt="Жіночий енергоклуб України"/>
-            <img src="assets/logo-sup.jpg" alt="Спілка Українських Підприємців"/>
-            <img src="assets/logo-asau.jpg" alt="Асоціація сонячної енергетики України"/>
-            <img src="assets/logo-tpp.jpg" alt="Торгово-Промислова палата України"/>
-            <img src="assets/logo-onpu.jpg" alt="Одеська політехніка"/>
-            <img src="assets/logo-employers.jpg" alt="Об'єднання організацій роботодавців Одеської області"/>
+            <div class="logo-tile"><img src="assets/logo-women.jpg" alt="Жіночий енергоклуб України"/></div>
+            <div class="logo-tile why-logo-sup" aria-label="Спілка Українських Підприємців">
+              <div class="sup-abbr">СУП</div>
+              <div class="sup-full">Спілка Українських<br/>Підприємців</div>
+            </div>
+            <div class="logo-tile"><img src="assets/logo-asau.jpg" alt="Асоціація сонячної енергетики України"/></div>
+            <div class="logo-tile"><img src="assets/logo-tpp.jpg" alt="Торгово-Промислова палата України"/></div>
+            <div class="logo-tile"><img src="assets/logo-onpu.jpg" alt="Одеська політехніка"/></div>
+            <div class="logo-tile"><img src="assets/logo-employers.jpg" alt="Об'єднання організацій роботодавців Одеської області"/></div>
           </div>
         </div>
       </div>
@@ -89,7 +102,7 @@
       <div class="kp-eyebrow">Сонячна електростанція під ключ</div>
       <div class="kp-title">${cap(m.tech.stationType)} СЕС «${esc(m.meta.object)}»${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>
       <div class="kp-desc">
-        Тип рішення: <b>${esc(m.tech.stationType)} сонячна електростанція</b>${m.tech.hasBattery ? " з акумуляторною батареєю (автономія / резерв)" : ""} — генерація
+        Тип рішення: <b>${esc(m.tech.stationType)} сонячна електростанція</b>${m.tech.hasBattery ? " та акумуляторна система (автономія / резерв)" : ""} — генерація
         власної електроенергії для потреб об'єкта зі зниженням витрат на електропостачання.
       </div>
       <!-- Об'єкт/Виконавець збільшено та виділено картками (запит Анни,
@@ -123,13 +136,27 @@
   // а не на сторінці "Економічна вигода" — там лишились тільки грошові
   // показники (тариф, економія, окупність, дохід, LCOE). Розділення
   // технічних і фінансових даних — свідоме рішення (запит Анни, 2026-07-07).
+  //
+  // Оновлено 2026-07-13 (запит Анни): (1) назва панелі показується БЕЗ
+  // технічного префіксу "PV модуль"/"Фотомодуль" — він потрібен лише для
+  // розпізнавання рядка як панелі в buildTechSpec (regex isPanel вище),
+  // але в тексті виглядає зайвим/канцелярським; (2) одразу після інформації
+  // про сонячні панелі додано аналогічний блок про інвертор (модель +
+  // кількість), якого тут раніше не було зовсім (інвертор фігурував лише
+  // на сторінці-обкладинці як кВт потужності, без назви моделі).
+  function stripEquipPrefix(name) {
+    return String(name || "").replace(/^\s*(PV\s*модул[ья]?|фотомодул[ья]?)\s*/i, "").trim();
+  }
+
   function pageAbout(m) {
     const gallery = m.images.slice(1);
     const chartId = "kp-gen-chart";
-    // Опис обладнання формується з даних (панелі/батарея), а не хардкодиться,
-    // щоб при завантаженні нового файлу-розрахунку текст сам оновлювався.
+    // Опис обладнання формується з даних (панелі/інвертор/батарея), а не
+    // хардкодиться, щоб при завантаженні нового файлу-розрахунку текст сам
+    // оновлювався.
     const equipParts = [];
-    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(m.tech.panelModel)}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.inverterModel) equipParts.push(`інвертор <b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`акумуляторна батарея <b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     const hasGenStats = m.model.annualGenKwh || m.model.annualGenPerKw || m.model.gen30y;
     return `
@@ -165,6 +192,13 @@
   // прихований на друку класом .no-print, значення підмінюється на клієнті
   // без повторного звернення до Google Sheets (див. wireFinMonthSelect()
   // нижче, викликається з render()).
+  // Оновлено 2026-07-13 (запит Анни, "розподілити зміст на весь лист"):
+  // додано клас "fin-page" (той самий фіксовано-висотний flex-стовпець,
+  // що й у інших "особливих" сторінок) + внутрішня обгортка ".fin-content"
+  // з flex:1 і justify-content:space-between, щоб блоки (текст-вступ,
+  // benefit-strip, картка місячної економії, 2 фінансові картки)
+  // рівномірно розтягувались на всю висоту сторінки, а не тулились угорі
+  // з порожнечею знизу.
   const UK_MONTHS = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
     "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
 
@@ -179,40 +213,42 @@
       .map((x, i) => `<option value="${i}"${i === defaultIdx ? " selected" : ""}>${esc(x.month)}</option>`)
       .join("");
     return `
-    <section class="kp-page">
+    <section class="kp-page fin-page">
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">02</span> Фінансові показники</div>
-      <div class="kp-body">
-        <p>Нижче — ключові фінансові показники проєкту, розраховані на основі поточного тарифу на електроенергію
-        та фактичних параметрів станції. Вони дозволяють оцінити реальну економічну вигоду від впровадження СЕС
-        як у короткостроковій, так і в довгостроковій перспективі.</p>
-      </div>
-      <div class="benefit-strip">
-        <div class="benefit-box green">
-          <div class="cap">Річна економія, за умови 100% споживання згенерованої е/е</div>
-          <div class="big">${m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : "—"}</div>
+      <div class="fin-content">
+        <div class="kp-body">
+          <p>Нижче — ключові фінансові показники проєкту, розраховані на основі поточного тарифу на електроенергію
+          та фактичних параметрів станції. Вони дозволяють оцінити реальну економічну вигоду від впровадження СЕС
+          як у короткостроковій, так і в довгостроковій перспективі.</p>
         </div>
-        <div class="benefit-box dark">
-          <div class="cap">Строк окупності проєкту при діючому тарифі</div>
-          <div class="big">${m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : "—"}</div>
+        <div class="benefit-strip">
+          <div class="benefit-box green">
+            <div class="cap">Річна економія, за умови 100% споживання згенерованої е/е</div>
+            <div class="big">${m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : "—"}</div>
+          </div>
+          <div class="benefit-box dark">
+            <div class="cap">Строк окупності проєкту при діючому тарифі</div>
+            <div class="big">${m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : "—"}</div>
+          </div>
         </div>
-      </div>
-      <div class="fin-month-card">
-        <div>
-          <div class="lbl">Потенційна місячна економія, за умови 100% споживання, у
-            <span id="fin-month-label">${defaultItem ? esc(defaultItem.month) : "—"}</span> ${year} р.</div>
-          <div class="val" id="fin-month-value">${defaultItem && defaultItem.amount != null ? fmtUsd(defaultItem.amount) : "—"}</div>
+        <div class="fin-month-card">
+          <div>
+            <div class="lbl">Потенційна місячна економія, за умови 100% споживання, у
+              <span id="fin-month-label">${defaultItem ? esc(defaultItem.month) : "—"}</span> ${year} р.</div>
+            <div class="val" id="fin-month-value">${defaultItem && defaultItem.amount != null ? fmtUsd(defaultItem.amount) : "—"}</div>
+          </div>
+          ${monthly.length ? `<select id="fin-month-select" class="no-print">${optionsHtml}</select>` : ""}
         </div>
-        ${monthly.length ? `<select id="fin-month-select" class="no-print">${optionsHtml}</select>` : ""}
-      </div>
-      <div class="stat-cards cols-2">
-        <div class="stat-card">
-          <div class="num">${m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : "—"}</div>
-          <div class="lbl">Загальний економічний ефект від впровадження СЕС за 30 років експлуатації</div>
-        </div>
-        <div class="stat-card">
-          <div class="num">${m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн / 1 кВт·г" : "—"}</div>
-          <div class="lbl">LCOE30 — собівартість 1 кВт·год сонячної електроенергії від СЕС, з ПДВ</div>
+        <div class="stat-cards cols-2">
+          <div class="stat-card">
+            <div class="num">${m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : "—"}</div>
+            <div class="lbl">Загальний економічний ефект від впровадження СЕС за 30 років експлуатації</div>
+          </div>
+          <div class="stat-card">
+            <div class="num">${m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн / 1 кВт·г" : "—"}</div>
+            <div class="lbl">LCOE30 — собівартість 1 кВт·год сонячної електроенергії від СЕС, з ПДВ</div>
+          </div>
         </div>
       </div>
     </section>`;
@@ -258,6 +294,28 @@
   // можливе "перетікання" на сирітську сторінку без заголовка (див.
   // коментар у style.css над .budget-layout) — навмисно НЕ обрізаємо
   // рядки через overflow:hidden, щоб не губити реальні дані бюджету.
+  //
+  // ВАЖЛИВО (2026-07-13, ІНШИЙ запит Анни того ж дня): вона попросила
+  // прибрати рядок "Доставка до нас. Не робимо націнку! Вписати суму
+  // доставок по усім позиціям" — цього рядка НЕМАЄ серед BUDGET_MATERIALS/
+  // BUDGET_WORKS нижче (перевірено — жоден з цих 10 фіксованих рядків
+  // такий текст не містить). Це означає, що цей рядок НЕ з нашого шаблону,
+  // а є РЯДКОМ ОБЛАДНАННЯ в самій вкладці ПДВ конкретного файла-розрахунку
+  // (equipRows читається динамічно з категорії "Обладнання" — findBudgetEquipItems
+  // нижче) — тобто чиясь робоча нотатка, випадково залишена як рядок
+  // номенклатури в Google Sheet. Видалити її звідси кодом неможливо (це
+  // не наш текст) — рядок потрібно прибрати в самому файлі-розрахунку
+  // (вкладка ПДВ, категорія обладнання). Сказано Анні прямим текстом при
+  // здачі цієї зміни.
+  //
+  // Оновлено 2026-07-13 (той самий запит): (1) кольорове розділення трьох
+  // груп (Обладнання/Витратні матеріали/Роботи) прибрано — замість цього
+  // останній рядок кожної групи отримує потовщену нижню границю (.group-last
+  // у style.css), що візуально утворює рамку навколо розділу; (2) бічна
+  // колонка приміток (.budget-notes) тепер вертикально центрується
+  // відносно всієї сторінки (не лише висоти таблиці) — сторінка стала
+  // фіксовано-висотним flex-стовпцем (.budget-page), а .budget-layout —
+  // flex:1 з align-items:center.
   const BUDGET_MATERIALS = [
     "PV кабель для підключення фотомодулів, 6мм, Німеччина",
     "Автоматика захисту змінного струму",
@@ -287,7 +345,8 @@
       const name = getName(it);
       const qty = getQty(it);
       const first = i === 0;
-      return `<tr class="${groupClass}">
+      const last = i === items.length - 1;
+      return `<tr class="${groupClass}${last ? " group-last" : ""}">
         ${first ? `<td class="budget-cat" rowspan="${items.length}"><span>${esc(catLabel)}</span></td>` : ""}
         <td>${esc(name)}</td>
         <td class="num">${qty == null ? "—" : fmtNum(qty)}</td>
@@ -301,7 +360,7 @@
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
     const b = m.budget || {};
     return `
-    <section class="kp-page">
+    <section class="kp-page budget-page">
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
       <div class="budget-layout">
@@ -344,6 +403,11 @@
   // вказано або файл не вдалось завантажити/відрендерити — сторінка не
   // виводиться взагалі (той самий підхід, що й раніше застосовувався до
   // опційного PDF-звіту).
+  // Оновлено 2026-07-13 (запит Анни, "лучше разместить + картинку
+  // пропорційно збільшити"): .shading-img тепер займає всю висоту рядка
+  // (flex/align-items:center, img height:100%/object-fit:contain) замість
+  // width:100%/auto-height — картинка масштабується пропорційно і більша
+  // за замовчуванням; колонка під картинку трохи розширена (1fr 1.5fr).
   const SHADING_POINTS = [
     "Ваше обладнання та температурний режим його роботи",
     "Локальні затінення від оточуючих об'єктів",
@@ -447,6 +511,13 @@
   // pageHeader()/num-badge — лише невеликий логотип зверху і зелений
   // банер із заголовком (той самий патерн, що й .why-banner), точно як
   // на скріншоті.
+  // Оновлено 2026-07-13 (запит Анни): комірки колонок "Гарантія" і
+  // "Термін використання*" тепер contenteditable — Анна хоче мати змогу
+  // вручну вписувати/змінювати гарантійні терміни під конкретний проєкт,
+  // а не покладатись лише на фіксовані значення шаблону. Значення, введені
+  // вручну ДО натискання "Друк / зберегти як PDF", потрапляють у PDF як
+  // є — html2canvas знімає живий DOM, тому це працює "з коробки", без
+  // додаткового коду збереження.
   function pageWarranty(m) {
     return `
     <section class="kp-page warranty-page">
@@ -458,14 +529,14 @@
             <tr><th>Компоненти СЕС</th><th>Гарантія</th><th>Термін використання*</th></tr>
           </thead>
           <tbody>
-            <tr><td>Генерація фотоелектричних модулів</td><td>30 років</td><td rowspan="5" class="wu">до 35 років</td></tr>
-            <tr><td>Цілісність фотоелектричних модулів</td><td>12 років</td></tr>
-            <tr><td>Система кріплень</td><td>5 років</td></tr>
-            <tr><td>Монтажні роботи</td><td rowspan="2">3 роки</td></tr>
+            <tr><td>Генерація фотоелектричних модулів</td><td contenteditable="true">30 років</td><td rowspan="5" class="wu" contenteditable="true">до 35 років</td></tr>
+            <tr><td>Цілісність фотоелектричних модулів</td><td contenteditable="true">12 років</td></tr>
+            <tr><td>Система кріплень</td><td contenteditable="true">5 років</td></tr>
+            <tr><td>Монтажні роботи</td><td rowspan="2" contenteditable="true">3 роки</td></tr>
             <tr><td>Кабельно-провідникова продукція</td></tr>
-            <tr><td>Захисні пристрої та автоматика</td><td rowspan="2">5 років</td><td rowspan="2" class="wu">до 20 років</td></tr>
+            <tr><td>Захисні пристрої та автоматика</td><td rowspan="2" contenteditable="true">5 років</td><td rowspan="2" class="wu" contenteditable="true">до 20 років</td></tr>
             <tr><td>Інвертори</td></tr>
-            <tr><td>Онлайн-моніторинг параметрів роботи сонячної електростанції</td><td colspan="2" class="wu-life">безстроково</td></tr>
+            <tr><td>Онлайн-моніторинг параметрів роботи сонячної електростанції</td><td colspan="2" class="wu-life" contenteditable="true">безстроково</td></tr>
           </tbody>
         </table>
       </div>
