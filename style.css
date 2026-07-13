@@ -308,6 +308,78 @@ table.kp-table tr.grand td{
   border-top:2px solid var(--ink);
 }
 
+/* ---------- Сторінка "Бюджет реалізації" (запит Анни, 2026-07-13) ----------
+   Таблиця 1:1 з референсного слайду: три групи (Обладнання / Витратні
+   матеріали / Роботи), кожна з мержованою колонкою назви групи (вертикальний
+   напис) і мержованою колонкою підсумкової суми. Кольори наближені до
+   референсу, але побудовані на фірмовій палітрі (--ink / --green /
+   --green-dark), а не скопійовані піпеткою один в один. */
+.budget-layout{
+  display:grid;
+  grid-template-columns: 2.3fr 1fr;
+  gap: 28px;
+  align-items:start;
+  margin-top: 4px;
+}
+table.budget-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size: 12px;
+}
+table.budget-table th{
+  background: var(--ink);
+  color:#fff;
+  text-align:left;
+  padding:12px 14px;
+  font-size:11.5px;
+  font-weight:700;
+  line-height:1.35;
+}
+table.budget-table th.num{ text-align:right; }
+table.budget-table td{
+  padding:10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+  color:#fff;
+  vertical-align:middle;
+}
+table.budget-table td.num{ text-align:right; }
+table.budget-table tbody tr:last-child td{ border-bottom:none; }
+table.budget-table .budget-cat{
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align:center;
+  font-weight:800;
+  font-size:12.5px;
+  letter-spacing:.03em;
+  background: var(--ink);
+  border-bottom: none;
+  padding: 16px 10px;
+}
+table.budget-table .grp-equip{ background: var(--green); }
+table.budget-table .grp-works{ background: var(--green); }
+table.budget-table .grp-mat{ background: #4C7A72; }
+table.budget-table .budget-price{
+  background: var(--green-dark);
+  font-weight:800;
+  font-size:16px;
+  text-align:center;
+}
+table.budget-table .grp-mat .budget-price{ background:#375D57; }
+table.budget-table tfoot tr.sum{ background: var(--ink); font-weight:700; font-size:12.5px; }
+table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); }
+table.budget-table tfoot tr.sum.grand{ background:#0D1512; font-size:15px; font-weight:800; }
+table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
+
+.budget-notes{ display:flex; flex-direction:column; gap:16px; padding-top:6px; }
+.budget-notes .note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.5; color:#2b2f2e; }
+.budget-notes .note b{ color:var(--ink); }
+.budget-notes .chk{
+  flex:none; width:20px; height:20px; border-radius:50%;
+  background: var(--tint); color:var(--green-dark);
+  display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800;
+  margin-top:1px;
+}
+
 .cost-box{
   border:1px solid var(--line);
   border-radius: var(--radius);
