@@ -48,6 +48,22 @@
         }
       }
 
+      // Сезонні погодинні графіки (Google Sheets, опційно) — сторінка "05"
+      // КП. Той самий "необов'язково, fail-soft" підхід, що й у PvSyst.pdf
+      // вище: якщо поле порожнє або файл не вдалось завантажити/розпарсити
+      // (не знайдено таблиці "0H..23H" на жодній вкладці) — сторінка просто
+      // не додається до документа.
+      let seasonalHourly = null;
+      const seasonalUrl = document.getElementById("in-seasonal-url").value.trim();
+      if (seasonalUrl) {
+        try {
+          setStatus("Завантажуємо сезонні погодинні графіки...");
+          seasonalHourly = await KpSeasonal.fetchSeasonalHourly(seasonalUrl);
+        } catch (e) {
+          console.warn("Сезонні графіки: не вдалось завантажити/розпарсити (не критично):", e);
+        }
+      }
+
       let objectName = document.getElementById("in-object").value.trim();
       if (!objectName) {
         try {
@@ -78,6 +94,7 @@
         model: modelData,
         budget: data.budget,
         pvsystImage,
+        seasonalHourly,
       };
 
       KpRender.render(model);
