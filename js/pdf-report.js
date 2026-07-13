@@ -1,21 +1,24 @@
-// pdf-report.js — робота із завантаженим PDF-звітом по генерації
-// (наприклад, експорт з PVsyst/PVGIS чи іншої програми моделювання).
+// pdf-report.js — робота із PDF-звітом по генерації (наприклад, експорт з
+// PVsyst/PVGIS чи іншої програми моделювання).
 //
 // Свідоме рішення: цифри для розрахунків (річна генерація, економія,
 // окупність) беруться з вкладки "Моделювання" в Google Sheets — там вони
-// вже порахован і надійні. PDF-звіт у v1 використовується як додаток-
-// підтвердження: перша сторінка рендериться в картинку і вставляється в
-// КП. Якщо треба автоматично витягувати конкретні цифри саме з цього PDF
-// (а не з таблиці) — знадобиться зразок такого файлу, щоб написати парсер
-// під його реальну структуру (наразі зразка немає).
+// вже пораховані й надійні. PDF-звіт використовується як картинка-
+// підтвердження: конкретна сторінка рендериться в зображення і
+// вставляється в КП (сторінка "04", джерело файлу — Google Drive-
+// посилання, див. js/drive.js і app.js).
 //
 // Використовує pdf.js (CDN, підключено в index.html).
 
 (function () {
-  async function renderFirstPageToDataUrl(file) {
-    const buf = await file.arrayBuffer();
+  // source: ArrayBuffer (напр. з Google Drive) або File (з <input type=file>).
+  // pageNum: 1-based номер сторінки; якщо виходить за межі документа —
+  // береться найближча існуюча сторінка (не кидає помилку).
+  async function renderPdfPageToDataUrl(source, pageNum) {
+    const buf = source instanceof ArrayBuffer ? source : await source.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    const page = await pdf.getPage(1);
+    const n = Math.min(Math.max(pageNum || 1, 1), pdf.numPages);
+    const page = await pdf.getPage(n);
     const viewport = page.getViewport({ scale: 2 });
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
@@ -23,6 +26,12 @@
     const ctx = canvas.getContext("2d");
     await page.render({ canvasContext: ctx, viewport }).promise;
     return canvas.toDataURL("image/png");
+  }
+
+  // Лишено для сумісності зі старим API (файл із <input type=file>,
+  // раніше використовувалось на сторінці "Технічне рішення").
+  async function renderFirstPageToDataUrl(file) {
+    return renderPdfPageToDataUrl(file, 1);
   }
 
   async function tryExtractAnnualGenerationKwh(file) {
@@ -51,5 +60,5 @@
     }
   }
 
-  window.KpPdfReport = { renderFirstPageToDataUrl, tryExtractAnnualGenerationKwh };
+  window.KpPdfReport = { renderPdfPageToDataUrl, renderFirstPageToDataUrl, tryExtractAnnualGenerationKwh };
 })();
