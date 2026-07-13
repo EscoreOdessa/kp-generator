@@ -9,6 +9,9 @@
 // колонки/значення за текстом заголовків/підписів. Якщо в майбутньому
 // парсинг "зʼїде", перевір спочатку KP_CONFIG.SHEET_TAB_PDV /
 // SHEET_TAB_MODEL (назви вкладок) і ключові слова нижче (HEADERS_*).
+// Виняток — parseBudgetCells() нижче, яка навмисно читає фіксовані адреси
+// комірок (те саме рішення, що й для "Фінансових показників" у
+// parseModelSheet, за проханням Анни).
 
 (function () {
   function extractSpreadsheetId(urlOrId) {
@@ -133,6 +136,27 @@
     return { categories, nettoTotal };
   }
 
+  // ---------- Бюджет реалізації (сторінка "03 Бюджет реалізації") ----------
+  // Фіксовані комірки вкладки ПДВ стандартного шаблону файла-розрахунку
+  // (запит Анни, 2026-07-13): L2 — підсумок групи "Обладнання" (сума
+  // продажу нетто без ПДВ категорії "Основне технічне обладнання та
+  // система кріплення"), L12 — підсумок групи "Витратні матеріали", L22 —
+  // підсумок групи "Роботи", L32 — "Разом без ПДВ" по всьому кошторису,
+  // E44 — "Загальна вартість з ПДВ". ПДВ рахуємо самі як E44 - L32, бо
+  // окремої комірки саме під цю різницю в шаблоні немає.
+  function cellAt(rows, r, c) {
+    return rows[r] && rows[r][c] != null ? rows[r][c] : null;
+  }
+  function parseBudgetCells(rows) {
+    const equipmentCost = numeric(cellAt(rows, 1, 11));   // L2  (row idx1, col L = idx11)
+    const materialsCost = numeric(cellAt(rows, 11, 11));  // L12 (row idx11)
+    const worksCost = numeric(cellAt(rows, 21, 11));      // L22 (row idx21)
+    const nettoTotal = numeric(cellAt(rows, 31, 11));     // L32 (row idx31)
+    const grossTotal = numeric(cellAt(rows, 43, 4));      // E44 (row idx43, col E = idx4)
+    const vat = (grossTotal != null && nettoTotal != null) ? grossTotal - nettoTotal : null;
+    return { equipmentCost, materialsCost, worksCost, nettoTotal, grossTotal, vat };
+  }
+
   // ---------- Вкладка "Моделювання Фін. показників роботи СЕС" ----------
   function findLabelValue(rows, keywords, exclude) {
     for (let r = 0; r < rows.length; r++) {
@@ -225,10 +249,11 @@
     return {
       pdv: parsePdvSheet(pdvRows),
       model: parseModelSheet(modelRows),
+      budget: parseBudgetCells(pdvRows),
     };
   }
 
-  window.KpSheets = { loadCalcFromSheet, extractSpreadsheetId, parsePdvSheet, parseModelSheet };
+  window.KpSheets = { loadCalcFromSheet, extractSpreadsheetId, parsePdvSheet, parseModelSheet, parseBudgetCells };
 })();
 
 // Окремо: назва файлу в Google Sheets. Раніше використовувалась як
