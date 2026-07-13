@@ -191,6 +191,28 @@ body{
 .hero-img img{ width:100%; display:block; }
 .caption{ font-size:11px; color:var(--text-muted); margin-bottom:18px; }
 
+/* ---------- Сторінка 3 — обкладинка (фікс переповнення при друку,
+   2026-07-13) ----------
+   Раніше ця сторінка була простим .kp-page з природним min-height —
+   на екрані це просто робило сторінку вищою за --page-h (непомітно, бо
+   ніхто не гортає "цю картинку" далі), але при РЕАЛЬНОМУ друці/збереженні
+   в PDF (@media print знімає min-height, залишає лише page-break-after)
+   контент, який не влазив у одну фізичну сторінку A4, просто "перетікав"
+   на наступну фізичну сторінку PDF БЕЗ повторного логотипа/шапки —
+   Анна надіслала такий зламаний PDF, де фото розташування панелей +
+   4 картки опинялись на "сирітській" сторінці без заголовка. Фікс: та
+   сама flex-колонка фіксованої висоти (--page-h) + overflow:hidden, що
+   вже використовується на інших сторінках (.why-page/.shading-page/...),
+   а фото розташування панелей (.cover-page .hero-img) робимо flex:1 і
+   масштабуємо через object-fit:contain — фото просто МЕНШЕ, якщо не
+   влазить, а не обрізається і не "тікає" на іншу сторінку. */
+.cover-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
+.cover-page .hero-img{
+  flex:1; min-height:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.cover-page .hero-img img{ width:auto; height:100%; max-width:100%; object-fit:contain; }
+
 .stat-cards{
   display:grid;
   grid-template-columns: repeat(4,1fr);
@@ -373,7 +395,20 @@ table.kp-table tr.grand td{
    матеріали / Роботи), кожна з мержованою колонкою назви групи (вертикальний
    напис) і мержованою колонкою підсумкової суми. Кольори наближені до
    референсу, але побудовані на фірмовій палітрі (--ink / --green /
-   --green-dark), а не скопійовані піпеткою один в один. */
+   --green-dark), а не скопійовані піпеткою один в один.
+   Компактніші відступи/шрифт (2026-07-13, фікс переповнення при друку):
+   при повному наборі рядків (динамічна кількість позицій "Обладнання" +
+   по 5 фіксованих "Витратні матеріали"/"Роботи" = легко 17-23 рядки)
+   таблиця раніше за висотою НЕ влазила в одну фізичну сторінку A4 при
+   друці і "перетікала" на сирітську сторінку без заголовка (той самий
+   баг, що й на сторінці-обкладинці, див. .cover-page вище) — зменшено
+   вертикальні padding і трохи шрифт, щоб типовий набір рядків влазив
+   в одну сторінку. ПОПЕРЕДЖЕННЯ: для файлів із дуже довгим списком
+   обладнання (більше ~9-10 позицій) таблиця все одно може перетекти на
+   другу сторінку — це не обрізає/не губить дані (на відміну від
+   overflow:hidden-підходу), просто виглядає як зайва сторінка без
+   логотипа; якщо це трапляється часто, варто обговорити з Анною окремий
+   дизайн "продовження" з повторним заголовком. */
 .budget-layout{
   display:grid;
   grid-template-columns: 2.3fr 1fr;
@@ -384,21 +419,21 @@ table.kp-table tr.grand td{
 table.budget-table{
   width:100%;
   border-collapse:collapse;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 table.budget-table th{
   background: var(--green-dark);
   color:#fff;
   text-align:left;
-  padding:12px 14px;
-  font-size:11.5px;
+  padding:8px 14px;
+  font-size:11px;
   font-weight:700;
-  line-height:1.35;
+  line-height:1.3;
 }
 table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:right; }
 table.budget-table td{
-  padding:10px 14px;
+  padding:6px 14px;
   border-bottom: 1px solid rgba(255,255,255,.16);
   color:#fff;
   vertical-align:middle;
@@ -410,11 +445,11 @@ table.budget-table .budget-cat{
   transform: rotate(180deg);
   text-align:center;
   font-weight:800;
-  font-size:12.5px;
+  font-size:12px;
   letter-spacing:.03em;
   background: var(--green-dark);
   border-bottom: none;
-  padding: 16px 10px;
+  padding: 10px 10px;
 }
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
@@ -422,13 +457,13 @@ table.budget-table .grp-mat{ background: #4C7A72; }
 table.budget-table .budget-price{
   background: var(--green-dark);
   font-weight:800;
-  font-size:16px;
+  font-size:15px;
   text-align:center;
 }
 table.budget-table .grp-mat .budget-price{ background:#375D57; }
-table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:12.5px; }
+table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:12px; }
 table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); }
-table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
+table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:14px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 
 .budget-notes{ display:flex; flex-direction:column; gap:16px; padding-top:6px; }
@@ -636,6 +671,21 @@ table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14
 
 /* ---------- Друк ---------- */
 @media print{
+  /* КРИТИЧНО (знайдено 2026-07-13 при аналізі реального PDF від Анни):
+     без цього правила Chrome/більшість браузерів НЕ друкують жоден
+     background-image/background-color, якщо користувач не поставив
+     галочку "Друкувати графіку тла"/"Background graphics" у діалозі
+     друку — і саме це трапилось із першим PDF: банер "Чому саме
+     ESCORE?" вийшов без зеленого фону, кружечки-чекбокси без заливки,
+     а титульна сторінка (фото заходу + білий текст/лого поверх) стала
+     ПОВНІСТЮ БІЛОЮ (білий текст і білий логотип на білому тлі — фото
+     просто не надрукувалось). Це правило змушує браузер завжди
+     друкувати фон незалежно від стану тієї галочки. */
+  *{
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
   body{ background:#fff; }
   .no-print{ display:none !important; }
   .kp-page{
