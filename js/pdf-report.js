@@ -4,9 +4,9 @@
 // Свідоме рішення: цифри для розрахунків (річна генерація, економія,
 // окупність) беруться з вкладки "Моделювання" в Google Sheets — там вони
 // вже пораховані й надійні. PDF-звіт використовується як картинка-
-// підтвердження: конкретна сторінка рендериться в зображення і
-// вставляється в КП (сторінка "04", джерело файлу — Google Drive-
-// посилання, див. js/drive.js і app.js).
+// підтвердження: конкретна сторінка (і, за потреби, лише її фрагмент)
+// рендериться в зображення і вставляється в КП (сторінка "04", джерело
+// файлу — Google Drive-посилання, див. js/drive.js і app.js).
 //
 // Використовує pdf.js (CDN, підключено в index.html).
 
@@ -14,7 +14,12 @@
   // source: ArrayBuffer (напр. з Google Drive) або File (з <input type=file>).
   // pageNum: 1-based номер сторінки; якщо виходить за межі документа —
   // береться найближча існуюча сторінка (не кидає помилку).
-  async function renderPdfPageToDataUrl(source, pageNum) {
+  // crop (опційно): {top,left,width,height} у частках 0..1 від розмірів
+  // відрендереної сторінки — якщо задано, повертається не вся сторінка,
+  // а лише цей прямокутник (напр. щоб вирізати конкретну діаграму зі
+  // звіту PVsyst, ігноруючи шапку/підпис навколо неї — див.
+  // KP_CONFIG.PVSYST_CROP у config.js).
+  async function renderPdfPageToDataUrl(source, pageNum, crop) {
     const buf = source instanceof ArrayBuffer ? source : await source.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     const n = Math.min(Math.max(pageNum || 1, 1), pdf.numPages);
@@ -25,7 +30,17 @@
     canvas.height = viewport.height;
     const ctx = canvas.getContext("2d");
     await page.render({ canvasContext: ctx, viewport }).promise;
-    return canvas.toDataURL("image/png");
+    if (!crop) return canvas.toDataURL("image/png");
+
+    const sx = Math.round((crop.left || 0) * canvas.width);
+    const sy = Math.round((crop.top || 0) * canvas.height);
+    const sw = Math.round((crop.width != null ? crop.width : 1) * canvas.width);
+    const sh = Math.round((crop.height != null ? crop.height : 1) * canvas.height);
+    const cropCanvas = document.createElement("canvas");
+    cropCanvas.width = sw;
+    cropCanvas.height = sh;
+    cropCanvas.getContext("2d").drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    return cropCanvas.toDataURL("image/png");
   }
 
   // Лишено для сумісності зі старим API (файл із <input type=file>,
