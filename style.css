@@ -316,11 +316,18 @@ body{
    розширена (1fr 1.35fr → 1fr 1.5fr), а сама .shading-img тепер займає
    всю висоту рядка (display:flex + height:100%), а img масштабується
    через object-fit:contain на всю доступну висоту, а не лише на ширину
-   колонки — картинка виходить помітно більшою. */
+   колонки — картинка виходить помітно більшою.
+   Оновлено ЩЕ РАЗ того ж дня (запит Анни, "картинку розташувати нижче і
+   збільшити"): колонка під картинку розширена ще сильніше (1fr 1.5fr →
+   1fr 1.7fr), а вирівнювання картинки всередині .shading-img змінено з
+   center на flex-end — картинка (яка через object-fit:contain зазвичай
+   ширша за високою, тому не займає всю висоту блоку) тепер притиснута до
+   низу свого блоку замість висіти по центру з порожнечею і зверху, і
+   знизу. */
 .shading-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .shading-layout{
   display:grid;
-  grid-template-columns: 1fr 1.5fr;
+  grid-template-columns: 1fr 1.7fr;
   gap: 40px;
   align-items:center;
   flex: 1;
@@ -356,7 +363,7 @@ body{
 }
 .shading-img{
   height:100%;
-  display:flex; align-items:center; justify-content:center;
+  display:flex; align-items:flex-end; justify-content:center;
   border-radius: var(--radius);
   overflow:hidden;
   border:1px solid var(--line);
@@ -435,19 +442,17 @@ table.kp-table tr.grand td{
    overflow:hidden-підходу), просто виглядає як зайва сторінка без
    логотипа; якщо це трапляється часто, варто обговорити з Анною окремий
    дизайн "продовження" з повторним заголовком.
-   Оновлено 2026-07-13 (ІНШИЙ запит Анни того ж дня, "замість розділення
-   кольором розділів у таблиці зробити товщі нижні границі, створивши
-   рамку навколо кожного розділу"): кольорові фони груп (grp-equip/
-   grp-mat/grp-works, колишні --green/#4C7A72) і кольорові мержовані
-   комірки (.budget-cat/.budget-price, колишні --green-dark) прибрані —
-   таблиця тепер звичайна, текст на білому (як .kp-table), а межа між
-   групами позначається товстою нижньою границею (3px, var(--ink)) на
-   останньому рядку кожної групи через клас .group-last (додається в
-   kp-render.js, budgetGroupRows()). Також .budget-page — сторінка стала
-   фіксовано-висотним flex-стовпцем, а .budget-layout — flex:1 з
-   align-items:center, щоб бічна колонка приміток (.budget-notes)
-   вертикально центрувалась відносно ВСІЄЇ сторінки (запит "текст справа
-   опустити на середину листа"), а не лише висоти таблиці. */
+   ПОВЕРНУТО НАЗАД (2026-07-13, того ж дня): спершу кольорові фони груп
+   (grp-equip/grp-mat/grp-works) і кольорові мержовані комірки
+   (.budget-cat/.budget-price) були прибрані на користь товщих нижніх
+   границь (.group-last) — але Анна сказала, що це "все зіпсувало" й
+   попросила повернути попередній кольоровий вигляд таблиці як було, і
+   натомість вирішити проблему зайвого рядка через обмеження діапазону
+   вибору обладнання (див. findBudgetEquipItems() у kp-render.js,
+   .slice(0,8) — B3:B10). Кольори тут відновлені 1:1 як до цієї сесії
+   правок. .budget-page/.budget-layout (align-items:center) — вертикальне
+   центрування бічної колонки приміток відносно всієї сторінки — НЕ
+   відкочено, Анна цю частину не просила міняти. */
 .budget-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .budget-layout{
   display:grid;
@@ -462,7 +467,6 @@ table.budget-table{
   width:100%;
   border-collapse:collapse;
   font-size: 13px;
-  border: 2px solid var(--ink);
 }
 table.budget-table th{
   background: var(--green-dark);
@@ -477,8 +481,8 @@ table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:right; }
 table.budget-table td{
   padding:7px 14px;
-  border-bottom: 1px solid var(--line);
-  color: var(--text);
+  border-bottom: 1px solid rgba(255,255,255,.16);
+  color:#fff;
   vertical-align:middle;
 }
 table.budget-table td.num{ text-align:right; }
@@ -490,24 +494,23 @@ table.budget-table .budget-cat{
   font-weight:800;
   font-size:13px;
   letter-spacing:.03em;
-  color: var(--ink);
+  background: var(--green-dark);
   border-bottom: none;
   padding: 10px 10px;
 }
+table.budget-table .grp-equip{ background: var(--green); }
+table.budget-table .grp-works{ background: var(--green); }
+table.budget-table .grp-mat{ background: #4C7A72; }
 table.budget-table .budget-price{
+  background: var(--green-dark);
   font-weight:800;
   font-size:16px;
   text-align:center;
-  color: var(--ink);
 }
-/* Товщі нижні границі замість кольорового розділення секцій (запит
-   Анни, 2026-07-13): останній рядок кожної групи (Обладнання/Витратні
-   матеріали/Роботи) отримує товсту нижню границю — візуально утворює
-   рамку навколо розділу. */
-table.budget-table tr.group-last td{ border-bottom: 3px solid var(--ink); }
-table.budget-table tfoot tr.sum{ background: var(--tint); font-weight:700; font-size:13px; color:var(--ink); }
-table.budget-table tfoot tr.sum td{ border-bottom: 1px solid var(--line); }
-table.budget-table tfoot tr.sum.grand{ background: var(--ink); color:#fff; font-size:15px; font-weight:800; }
+table.budget-table .grp-mat .budget-price{ background:#375D57; }
+table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13px; }
+table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); }
+table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 
 .budget-notes{ display:flex; flex-direction:column; gap:16px; }
@@ -640,11 +643,19 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
    align-items:center, тому фото+контакти вертикально центруються в усій
    висоті сторінки, а не тиснуться зверху. align-self:flex-start на
    логотипі — та сама причина, що й на .warranty-page .logo вище (без
-   цього логотип розтягнеться на всю ширину як прямий child flex-колонки). */
+   цього логотип розтягнеться на всю ширину як прямий child flex-колонки).
+   Оновлено ЩЕ РАЗ того ж дня (запит Анни, "все увеличить и расположить
+   ближе к центру" — перше центрування її не задовольнило): фото/ім'я/
+   посада/контакти збільшені ще сильніше (фото-колонка 300px→380px,
+   практично всі шрифти +2-3px), і .manager-body тепер додатково
+   обмежений max-width:980px + margin:0 auto — блок центрується не лише
+   по вертикалі (як було), а й по горизонталі, замість розтягування на
+   всю ширину сторінки — це має читатись як по-справжньому "по центру
+   листа", а не просто "вертикально вирівняно по краях". */
 .manager-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .manager-page .logo{ height:26px; display:block; margin-bottom:40px; align-self:flex-start; }
-.manager-body{ display:flex; gap:56px; align-items:center; flex:1; min-height:0; }
-.manager-photo-col{ flex: 0 0 300px; }
+.manager-body{ display:flex; gap:64px; align-items:center; flex:1; min-height:0; max-width:980px; margin:0 auto; width:100%; }
+.manager-photo-col{ flex: 0 0 380px; }
 .manager-photo{
   width:100%;
   aspect-ratio: 3 / 4;
@@ -653,12 +664,12 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
   background:#eee;
 }
 .manager-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
-.manager-name{ font-size:19px; font-weight:800; color:var(--green-dark); margin-top:14px; }
-.manager-role{ font-size:14px; color:var(--text-muted); font-weight:600; margin-top:2px; }
-.manager-contacts{ flex:1; padding-top: 20px; display:flex; flex-direction:column; gap:28px; }
+.manager-name{ font-size:23px; font-weight:800; color:var(--green-dark); margin-top:16px; }
+.manager-role{ font-size:16px; color:var(--text-muted); font-weight:600; margin-top:3px; }
+.manager-contacts{ flex:1; padding-top: 20px; display:flex; flex-direction:column; gap:32px; }
 .manager-contacts .mc-row{ display:flex; gap:48px; }
-.manager-contacts .mc-title{ font-size:17px; font-weight:800; color:var(--green-dark); margin-bottom:6px; }
-.manager-contacts .mc-val{ font-size:17px; color:var(--ink); line-height:1.5; }
+.manager-contacts .mc-title{ font-size:19px; font-weight:800; color:var(--green-dark); margin-bottom:7px; }
+.manager-contacts .mc-val{ font-size:19px; color:var(--ink); line-height:1.5; }
 .manager-contacts .mc-val a{ color:var(--ink); text-decoration: underline; }
 
 .terms-list{ margin-top:8px; }
