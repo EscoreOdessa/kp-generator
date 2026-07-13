@@ -1,7 +1,8 @@
 // kp-render.js — будує розмітку комерційної пропозиції (до 11 сторінок
 // А4, альбомна орієнтація — сторінки "04" (PvSyst) і "05" (сезонні
 // погодинні графіки) опційні й з'являються лише якщо вказано відповідне
-// посилання)
+// посилання; останні дві сторінки — "Гарантійний термін..." і контакти
+// менеджера — фіксовані, без КП-номера/бейджа, завжди останні)
 // з даних, зібраних у app.js (таблиця розрахунків + PDF генерації +
 // зображення), і малює діаграми помісячної/погодинної генерації через
 // Chart.js.
@@ -28,26 +29,6 @@
           № ${esc(meta.kpNumber)} · від ${esc(meta.kpDateStr)}<br/>
           Дійсна ${esc(meta.validDays)} календарних днів
         </div>
-      </div>`;
-  }
-
-  function footerDark(company) {
-    return `
-      <div class="footer-dark">
-        <div>
-          <div class="fname">escore</div>
-          <div class="fsub">${esc(company.tagline).replace(/\n/g, "<br/>")}</div>
-        </div>
-        <div class="fcontact">
-          <div><b>${esc(company.name)}</b></div>
-          <div>${esc(company.address)}</div>
-          <div>тел.: ${esc(company.phone)} · ${esc(company.email)}</div>
-          <div>${esc(company.site)}</div>
-        </div>
-      </div>
-      <div class="disclaimer">
-        Комерційна пропозиція має інформаційний характер і не є публічною офертою. Остаточна вартість визначається
-        договором після робочого проєктування та узгодження специфікації обладнання.
       </div>`;
   }
 
@@ -445,87 +426,82 @@
     });
   }
 
-  // ---------- Сторінка 06 — вартість проєкту ----------
-  // Підсумкові цифри тут навмисно беруться напряму з вкладки "Моделювання"
-  // (рядки 1-3: "Вартість СЕС", "Вартість 1 кВт СЕС", "Потужність СЕС",
-  // "Термін окупності") — це вже готовий, узгоджений розрахунок автора
-  // таблиці (враховує ПДВ, бонуси, комісії тощо), а не наша власна
-  // прикидка "нетто × 1.2".
-  function pageCost(m) {
-    const netto = m.pdv.nettoTotal;
-    const vatRate = m.overrides.vatRate;
-    // "Вартість СЕС" з Моделювання — це вже фінальна сума до сплати; якщо
-    // її раптом немає (порожня вкладка), рахуємо запасний варіант netto×(1+ПДВ).
-    const total = m.model.stationCostUsd != null ? m.model.stationCostUsd : netto * (1 + vatRate);
-    const prepPct = m.overrides.prepaymentPct;
-    const prepay = total * (prepPct / 100);
-    const balance = total - prepay;
+  // ---------- Сторінка — "Гарантійний термін та термін використання" ----------
+  // Замінює собою старі "06 Вартість проєкту" / "07 Економічна вигода" /
+  // "08 Що входить та умови" — видалені разом (запит Анни, 2026-07-13,
+  // "давай кое-что обговорим"). Контент — фіксована таблиця гарантійної
+  // політики компанії, 1:1 зі скріншоту референсу, не залежить від даних
+  // розрахунку. На відміну від решти сторінок, тут НЕМАЄ стандартного
+  // pageHeader()/num-badge — лише невеликий логотип зверху і зелений
+  // банер із заголовком (той самий патерн, що й .why-banner), точно як
+  // на скріншоті.
+  function pageWarranty(m) {
     return `
-    <section class="kp-page">
-      ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">06</span> Вартість проєкту</div>
-      <div class="cost-box">
-        <div class="cost-row"><span>Бюджет проєкту, нетто без ПДВ</span><b>${fmtUsd(netto)}</b></div>
-        <div class="cost-row total"><span>Вартість СЕС — РАЗОМ до сплати</span><span>${fmtUsd(total)}</span></div>
-      </div>
-      <div class="stat-cards">
-        <div class="stat-card"><div class="num">${m.model.costPerKw ? fmtUsd(m.model.costPerKw) : "—"}</div><div class="lbl">Вартість 1 кВт СЕС</div></div>
-        <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність фотомодулів</div></div>
-        <div class="stat-card"><div class="num">${m.model.paybackYears ? fmtNum(m.model.paybackYears, 2) : "—"}</div><div class="lbl">Термін окупності, років</div></div>
-      </div>
-      <div class="pay-split">
-        <div class="pay-card"><div class="amt">${fmtUsd(prepay)}</div><div class="lbl">Передоплата · ${prepPct}% — замовлення обладнання, мобілізація</div></div>
-        <div class="pay-card"><div class="amt">${fmtUsd(balance)}</div><div class="lbl">Залишок · ${100 - prepPct}% — після пусконалагодження і здачі</div></div>
+    <section class="kp-page warranty-page">
+      <img class="logo" src="data:image/png;base64,${ESCORE_LOGO_B64}" alt="escore" />
+      <div class="warranty-banner">Гарантійний термін та термін використання</div>
+      <div class="warranty-table-wrap">
+        <table class="warranty-table">
+          <thead>
+            <tr><th>Компоненти СЕС</th><th>Гарантія</th><th>Термін використання*</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Генерація фотоелектричних модулів</td><td>30 років</td><td rowspan="5" class="wu">до 35 років</td></tr>
+            <tr><td>Цілісність фотоелектричних модулів</td><td>12 років</td></tr>
+            <tr><td>Система кріплень</td><td>5 років</td></tr>
+            <tr><td>Монтажні роботи</td><td rowspan="2">3 роки</td></tr>
+            <tr><td>Кабельно-провідникова продукція</td></tr>
+            <tr><td>Захисні пристрої та автоматика</td><td rowspan="2">5 років</td><td rowspan="2" class="wu">до 20 років</td></tr>
+            <tr><td>Інвертори</td></tr>
+            <tr><td>Онлайн-моніторинг параметрів роботи сонячної електростанції</td><td colspan="2" class="wu-life">безстроково</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>`;
   }
 
-  // ---------- Сторінка 07 — економічна вигода (лише грошові показники) ----------
-  // Технічні показники генерації і діаграма перенесені на сторінку "Про
-  // проєкт" (pageAbout) — тут навмисно лишили тільки фінанси.
-  function pageEconomics(m) {
-    const gen = m.model.annualGenKwh; // потрібен лише для розрахунку savings нижче
-    const tariff = m.overrides.tariffUsdPerKwh;
-    const savings = m.model.annualSavingsUsd || (gen && tariff ? gen * tariff : null);
-    const monthlySavings = savings ? savings / 12 : null;
-    // Термін окупності — беремо готове значення з вкладки "Моделювання"
-    // (те саме число, що й на сторінці "Вартість проєкту"), а не рахуємо
-    // самі — щоб в КП не було двох різних цифр окупності.
-    const payback = m.model.paybackYears;
+  // ---------- Остання сторінка — контакти менеджера ----------
+  // Персональна "візитка" менеджера, який веде цей об'єкт — фото + контакти
+  // (запит Анни, 2026-07-13). Дані менеджера — фіксовані в KP_CONFIG.MANAGER
+  // (config.js); поки один менеджер ("пока один менеджер" — її слова) —
+  // якщо з'являться інші, MANAGER стане масивом і на стартовій сторінці
+  // з'явиться випадаючий список для вибору. Як і на сторінці
+  // "Гарантійний термін...", тут немає стандартного pageHeader()/num-badge
+  // — лише логотип зверху, точно як на скріншоті референсу. ЦЯ СТОРІНКА
+  // МАЄ ЗАЛИШАТИСЬ ОСТАННЬОЮ в масиві render() нижче.
+  function pageManager(m) {
+    const mgr = window.KP_CONFIG.MANAGER;
     return `
-    <section class="kp-page">
-      ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">07</span> Економічна вигода та проста окупність</div>
-      <div class="kp-body"><p>Розрахунок виконано з припущення, що станція повністю віддає згенеровану електроенергію на потреби
-      об'єкта, заміщуючи купівлю електроенергії у постачальника за тарифом ≈ $${tariff}/кВт·год.</p></div>
-      <div class="stat-cards">
-        <div class="stat-card"><div class="num">$${tariff}</div><div class="lbl">Тариф заміщення / кВт·год</div></div>
-        <div class="stat-card"><div class="num">${monthlySavings ? fmtUsd(monthlySavings) : "—"}</div><div class="lbl">Економія на місяць</div></div>
-        <div class="stat-card"><div class="num">${payback ? fmtNum(payback, 2) : "—"}</div><div class="lbl">Проста окупність, років</div></div>
-        <div class="stat-card"><div class="num">${m.model.income30y ? fmtUsd(m.model.income30y) : "—"}</div><div class="lbl">Сумарний дохід за 30 років</div></div>
-        <div class="stat-card"><div class="num">${m.model.lcoe30 ? fmtNum(m.model.lcoe30, 2) + " грн" : "—"}</div><div class="lbl">LCOE за 30 років</div></div>
+    <section class="kp-page manager-page">
+      <img class="logo" src="data:image/png;base64,${ESCORE_LOGO_B64}" alt="escore" />
+      <div class="manager-body">
+        <div class="manager-photo-col">
+          <div class="manager-photo"><img src="${mgr.photo}" alt="${esc(mgr.name)}"/></div>
+          <div class="manager-name">${esc(mgr.name)}</div>
+          <div class="manager-role">${esc(mgr.position)}</div>
+        </div>
+        <div class="manager-contacts">
+          <div class="mc-block">
+            <div class="mc-title">Написати мені</div>
+            <div class="mc-val"><a href="mailto:${esc(mgr.email)}">${esc(mgr.email)}</a></div>
+          </div>
+          <div class="mc-row">
+            <div class="mc-block">
+              <div class="mc-title">Подзвонити нам</div>
+              <div class="mc-val">${esc(mgr.phone)}</div>
+            </div>
+            <div class="mc-block">
+              <div class="mc-title">Адреса</div>
+              <div class="mc-val">${esc(mgr.address).replace(/\n/g, "<br/>")}</div>
+            </div>
+          </div>
+          <div class="mc-block">
+            <div class="mc-title">Соціальні мережі</div>
+            <div class="mc-val">instagram: ${esc(mgr.instagram)}</div>
+            <div class="mc-val">facebook: ${esc(mgr.facebook)}</div>
+          </div>
+        </div>
       </div>
-      <div class="benefit-strip">
-        <div class="benefit-box green"><div class="cap">Реальна економічна вигода</div><div class="big">${savings ? fmtUsd(savings) : "—"} / рік</div></div>
-        <div class="benefit-box dark"><div class="cap">Проста окупність</div><div class="big">${payback ? "≈ " + fmtNum(payback, 2) : "—"} року</div></div>
-      </div>
-    </section>`;
-  }
-
-  // ---------- Сторінка 08 — умови + футер ----------
-  function pageTerms(m) {
-    const c = m.meta.company;
-    return `
-    <section class="kp-page">
-      ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">08</span> Що входить та умови</div>
-      <div class="terms-list">
-        <div class="t-row"><b>Повний цикл «під ключ»</b> проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</div>
-        <div class="t-row"><b>Термін реалізації</b> орієнтовно ${esc(m.overrides.leadTimeWeeks)} тижнів від передоплати.</div>
-        <div class="t-row"><b>Гарантія</b> на монтажні роботи — ${esc(m.overrides.warrantyMonths)} міс.; на обладнання — згідно з гарантією виробників.</div>
-        <div class="t-row"><b>Оплата</b> ${m.overrides.prepaymentPct}% передоплата / ${100 - m.overrides.prepaymentPct}% після здачі. Ціни зафіксовано на строк дії пропозиції — ${esc(m.meta.validDays)} днів.</div>
-      </div>
-      ${footerDark(c)}
     </section>`;
   }
 
@@ -632,9 +608,8 @@
       pageBudget(model),
       pageShading(model),
       pageSeasonal(model),
-      pageCost(model),
-      pageEconomics(model),
-      pageTerms(model),
+      pageWarranty(model),
+      pageManager(model),
     ].join("\n");
 
     const holder = document.getElementById("kp-doc");
