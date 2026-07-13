@@ -486,6 +486,76 @@ table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 }
 .seasonal-chart-wrap canvas{ width:100% !important; height:100% !important; }
 
+/* ---------- Сторінка "Гарантійний термін та термін використання" ----------
+   Замінює стару "06 Вартість проєкту" (видалено разом із "07"/"08" —
+   запит Анни, 2026-07-13). НЕМАЄ стандартного .kp-header/.section-title —
+   лише невеликий логотип і зелений банер (той самий патерн, що й
+   .why-banner), точно як на скріншоті референсу. Банер і таблиця
+   навмисно "бліджать" до країв сторінки (той самий трюк з від'ємними
+   марджинами calc(-1*var(--page-pad)), що й у .why-banner), а не
+   обмежені стандартним --page-pad, як решта контентних сторінок. */
+.warranty-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
+.warranty-page .logo{ height:28px; display:block; margin-bottom:24px; }
+.warranty-banner{
+  background: var(--green); color:#fff;
+  font-size:22px; font-weight:800;
+  padding:16px var(--page-pad);
+  margin: 0 calc(-1 * var(--page-pad)) 0;
+}
+.warranty-table-wrap{ margin: 0 calc(-1 * var(--page-pad)); flex:1; min-height:0; overflow:hidden; }
+table.warranty-table{
+  width:100%;
+  height:100%;
+  border-collapse:collapse;
+  font-size: 13px;
+}
+table.warranty-table th{
+  background: #4C7A72;
+  color:#fff;
+  text-align:left;
+  padding:14px var(--page-pad);
+  font-size:13px;
+  font-weight:700;
+}
+table.warranty-table td{
+  padding:12px var(--page-pad);
+  border-bottom:1px solid var(--line);
+  color:#2b2f2e;
+  vertical-align:middle;
+}
+table.warranty-table td:first-child{ font-weight:700; color:var(--ink); }
+table.warranty-table td.wu, table.warranty-table td.wu-life{
+  text-align:center;
+  color: var(--text-muted);
+  border-left: 1px solid var(--line);
+}
+table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14px; }
+
+/* ---------- Остання сторінка — контакти менеджера ----------
+   Персональна "візитка" менеджера, який веде цей об'єкт (запит Анни,
+   2026-07-13). Так само немає .kp-header/.section-title — лише логотип
+   зверху, точно як на скріншоті. Фото — фіксоване співвідношення сторін
+   3:4 (object-fit:cover, щоб не спотворювалось незалежно від пропорцій
+   оригіналу), ім'я/посада — під фото зліва (не поверх фото). */
+.manager-page .logo{ height:26px; display:block; margin-bottom:40px; }
+.manager-body{ display:flex; gap:56px; align-items:flex-start; }
+.manager-photo-col{ flex: 0 0 300px; }
+.manager-photo{
+  width:100%;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius);
+  overflow:hidden;
+  background:#eee;
+}
+.manager-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
+.manager-name{ font-size:16px; font-weight:800; color:var(--green-dark); margin-top:14px; }
+.manager-role{ font-size:12.5px; color:var(--text-muted); font-weight:600; margin-top:2px; }
+.manager-contacts{ flex:1; padding-top: 20px; display:flex; flex-direction:column; gap:28px; }
+.manager-contacts .mc-row{ display:flex; gap:48px; }
+.manager-contacts .mc-title{ font-size:14px; font-weight:800; color:var(--green-dark); margin-bottom:6px; }
+.manager-contacts .mc-val{ font-size:15px; color:var(--ink); line-height:1.5; }
+.manager-contacts .mc-val a{ color:var(--ink); text-decoration: underline; }
+
 .terms-list{ margin-top:8px; }
 .terms-list .t-row{ display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:12.5px;}
 .terms-list .t-row b{ min-width:150px; color:var(--ink); }
