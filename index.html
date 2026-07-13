@@ -13,6 +13,18 @@
      "chart.min.js" на cdnjs — це ES-модуль, і звичайний <script> без
      type="module" впаде з "Cannot use import statement outside a module". -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<!-- pdf.js — рендер сторінки завантаженого PDF-звіту (PvSyst.pdf з Google
+     Drive) у картинку для сторінки "04" КП. Пінено на 3.11.174: новіші
+     збірки pdf.js — лише ES-модулі й ламаються під звичайним <script>
+     без type="module" (та сама причина, що й з Chart.js вище). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  window.addEventListener("DOMContentLoaded", function () {
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+  });
+</script>
 </head>
 <body>
 
@@ -24,6 +36,12 @@
     <label>Посилання на Google Sheet з розрахунком</label>
     <input type="url" id="in-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." />
     <div class="hint">Таблиця має бути відкрита «за посиланням». Вкладки мають називатись «ПДВ» і «Моделювання Фін. показників роботи СЕС» (див. js/config.js).</div>
+  </div>
+
+  <div class="field">
+    <label>Посилання на звіт PVsyst.pdf (Google Drive)</label>
+    <input type="url" id="in-pvsyst-url" placeholder="https://drive.google.com/file/d/..." />
+    <div class="hint">Необов'язково. Файл має бути відкритий «за посиланням». У КП автоматично додасться сторінка «04» зі скріншотом 5-ї сторінки цього звіту (карта затінення/3D-модель об'єкта).</div>
   </div>
 
   <div class="field">
@@ -63,6 +81,8 @@
 <script src="js/logo.js"></script>
 <script src="js/config.js"></script>
 <script src="js/sheets.js"></script>
+<script src="js/drive.js"></script>
+<script src="js/pdf-report.js"></script>
 <script src="js/images.js"></script>
 <script src="js/kp-render.js"></script>
 <script src="js/app.js"></script>
