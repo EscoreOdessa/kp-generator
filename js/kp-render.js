@@ -1,5 +1,6 @@
-// kp-render.js — будує розмітку комерційної пропозиції (9 сторінок А4,
-// альбомна орієнтація)
+// kp-render.js — будує розмітку комерційної пропозиції (до 10 сторінок
+// А4, альбомна орієнтація — сторінка "04" (PvSyst) опційна і з'являється
+// лише якщо вказано посилання на звіт)
 // з даних, зібраних у app.js (таблиця розрахунків + PDF генерації +
 // зображення), і малює діаграму помісячної генерації через Chart.js.
 
@@ -337,7 +338,42 @@
     </section>`;
   }
 
-  // ---------- Сторінка 5 — вартість проєкту ----------
+  // ---------- Сторінка 04 — імітаційна модель СЕС (PvSyst) ----------
+  // Контент — 1:1 зі скріншоту референсної презентації (запит Анни,
+  // 2026-07-13): заголовок із зеленою виділеною частиною + 6 пунктів
+  // факторів, врахованих при моделюванні, і скріншот 5-ї сторінки
+  // завантаженого звіту PvSyst.pdf (карта 3D-моделі об'єкта з
+  // розташуванням панелей). Джерело картинки — посилання на Google Drive
+  // з форми (KpDrive.fetchDriveFileArrayBuffer + KpPdfReport.
+  // renderPdfPageToDataUrl(buf, 5), див. app.js). Якщо посилання не
+  // вказано або файл не вдалось завантажити/відрендерити — сторінка не
+  // виводиться взагалі (той самий підхід, що й раніше застосовувався до
+  // опційного PDF-звіту).
+  const SHADING_POINTS = [
+    "Ваше обладнання та температурний режим його роботи",
+    "Локальні затінення від оточуючих об'єктів",
+    "Розташування сонячних панелей (кут нахилу, азимут)",
+    "Метеодані за минулі 15 років на основі бази даних Meteonorm 8.1",
+    "Втрати в кабельних лініях",
+    "Втрати електроенергії через запилення панелей",
+  ];
+
+  function pageShading(m) {
+    if (!m.pvsystImage) return "";
+    return `
+    <section class="kp-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title"><span class="num-badge">04</span> Ми створили <b class="accent">імітаційну модель вашої СЕС</b> та врахували:</div>
+      <div class="shading-layout">
+        <div class="shading-timeline">
+          ${SHADING_POINTS.map((p) => `<div class="shading-item"><span class="dot"></span>${esc(p)}</div>`).join("")}
+        </div>
+        <div class="shading-img"><img src="${m.pvsystImage}"/></div>
+      </div>
+    </section>`;
+  }
+
+  // ---------- Сторінка 05 — вартість проєкту ----------
   // Підсумкові цифри тут навмисно беруться напряму з вкладки "Моделювання"
   // (рядки 1-3: "Вартість СЕС", "Вартість 1 кВт СЕС", "Потужність СЕС",
   // "Термін окупності") — це вже готовий, узгоджений розрахунок автора
@@ -355,7 +391,7 @@
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">04</span> Вартість проєкту</div>
+      <div class="section-title"><span class="num-badge">05</span> Вартість проєкту</div>
       <div class="cost-box">
         <div class="cost-row"><span>Бюджет проєкту, нетто без ПДВ</span><b>${fmtUsd(netto)}</b></div>
         <div class="cost-row total"><span>Вартість СЕС — РАЗОМ до сплати</span><span>${fmtUsd(total)}</span></div>
@@ -372,7 +408,7 @@
     </section>`;
   }
 
-  // ---------- Сторінка 6 — економічна вигода (лише грошові показники) ----------
+  // ---------- Сторінка 06 — економічна вигода (лише грошові показники) ----------
   // Технічні показники генерації і діаграма перенесені на сторінку "Про
   // проєкт" (pageAbout) — тут навмисно лишили тільки фінанси.
   function pageEconomics(m) {
@@ -387,7 +423,7 @@
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">05</span> Економічна вигода та проста окупність</div>
+      <div class="section-title"><span class="num-badge">06</span> Економічна вигода та проста окупність</div>
       <div class="kp-body"><p>Розрахунок виконано з припущення, що станція повністю віддає згенеровану електроенергію на потреби
       об'єкта, заміщуючи купівлю електроенергії у постачальника за тарифом ≈ $${tariff}/кВт·год.</p></div>
       <div class="stat-cards">
@@ -404,13 +440,13 @@
     </section>`;
   }
 
-  // ---------- Сторінка 7 — умови + футер ----------
+  // ---------- Сторінка 07 — умови + футер ----------
   function pageTerms(m) {
     const c = m.meta.company;
     return `
     <section class="kp-page">
       ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">06</span> Що входить та умови</div>
+      <div class="section-title"><span class="num-badge">07</span> Що входить та умови</div>
       <div class="terms-list">
         <div class="t-row"><b>Повний цикл «під ключ»</b> проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</div>
         <div class="t-row"><b>Термін реалізації</b> орієнтовно ${esc(m.overrides.leadTimeWeeks)} тижнів від передоплати.</div>
@@ -522,6 +558,7 @@
       pageAbout(model),
       pageTech(model),
       pageBudget(model),
+      pageShading(model),
       pageCost(model),
       pageEconomics(model),
       pageTerms(model),
