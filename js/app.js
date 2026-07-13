@@ -108,6 +108,97 @@
     }
   }
 
+  // Чекаємо, поки всі <img> усередині кореня довантажаться (важливо перед
+  // html2canvas-рендером у handleSavePdf() нижче — незавантажене/недекодоване
+  // зображення може вийти порожнім на знімку).
+  async function waitForImages(root) {
+    const imgs = Array.from(root.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        });
+      })
+    );
+  }
+
+  // Формування PDF через html2canvas + jsPDF (запит Анни, 2026-07-13,
+  // після двох невдалих спроб полагодити нативний друк браузера —
+  // window.print()/@media print: перша сторінка друкувалась суцільно
+  // білою (position:absolute-елементи не дають .kp-page висоти, коли
+  // @media print скидає min-height у auto — сторінка "схлопується" в 0),
+  // а сторінка "Бюджет реалізації" (використовує display:grid для
+  // колонки таблиці + колонки приміток) "перетікала" на сирітську
+  // сторінку без заголовка, бо Chrome під час друку часто не вміє
+  // розбивати grid-контейнери по межі сторінки — переносить їх цілком.
+  // Замість того щоб ганятись за кожним новим сюрпризом @media print
+  // окремо, кожна .kp-page тепер рендериться html2canvas() у картинку
+  // ТОЧНО як показано на екрані (жодні правила друку не задіяні), і
+  // картинки вставляються в PDF одна на сторінку через jsPDF — це
+  // гарантує, що PDF завжди виглядає так само, як прев'ю на екрані,
+  // незалежно від браузера користувача.
+  async function handleSavePdf() {
+    const btn = document.getElementById("btn-print");
+    const doc = document.getElementById("kp-doc");
+    const pages = doc.querySelectorAll(".kp-page");
+    if (!pages.length) {
+      setStatus("Спочатку сформуйте КП.", true);
+      return;
+    }
+    btn.disabled = true;
+    // Ховаємо елементи, які не мають потрапити на знімок (напр. <select>
+    // вибору місяця на сторінці "Фінансові показники") — раніше це робив
+    // клас .no-print через @media print, але html2canvas рендерить живий
+    // DOM, а не print-версію, тому ховаємо вручну на час знімку.
+    const hidden = doc.querySelectorAll(".no-print");
+    hidden.forEach((el) => {
+      el.dataset.__prevDisplay = el.style.display;
+      el.style.display = "none";
+    });
+    try {
+      await waitForImages(doc);
+      const { jsPDF } = window.jspdf;
+      let pdf = null;
+      for (let i = 0; i < pages.length; i++) {
+        setStatus(`Формуємо PDF... сторінка ${i + 1} з ${pages.length}`);
+        const canvas = await html2canvas(pages[i], {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        if (!pdf) {
+          pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        } else {
+          pdf.addPage("a4", "landscape");
+        }
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH);
+      }
+      let filename = "KP.pdf";
+      const metaEl = doc.querySelector(".doc-meta");
+      if (metaEl) {
+        const m = metaEl.textContent.match(/№\s*([^\s·]+)/);
+        if (m) filename = "KP-" + m[1] + ".pdf";
+      }
+      pdf.save(filename);
+      setStatus("PDF збережено.");
+    } catch (err) {
+      console.error(err);
+      setStatus("Не вдалось сформувати PDF: " + (err.message || err), true);
+    } finally {
+      hidden.forEach((el) => {
+        el.style.display = el.dataset.__prevDisplay || "";
+        delete el.dataset.__prevDisplay;
+      });
+      btn.disabled = false;
+    }
+  }
+
   // Перетягування файлу прямо на звичайний <input type="file"> у Chrome
   // не завжди спрацьовує надійно — якщо не влучити точно у вузьке поле,
   // браузер за замовчуванням просто відкриє файл замість завантаження.
@@ -147,7 +238,7 @@
 
   ready(() => {
     document.getElementById("btn-generate").addEventListener("click", handleGenerate);
-    document.getElementById("btn-print").addEventListener("click", () => window.print());
+    document.getElementById("btn-print").addEventListener("click", handleSavePdf);
 
     document.getElementById("in-images").addEventListener("change", async (e) => {
       const list = document.getElementById("img-thumbs");
