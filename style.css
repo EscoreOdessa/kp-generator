@@ -138,25 +138,30 @@ body{
   margin-bottom: 22px;
 }
 .kp-header img.logo{ height: 30px; }
-.kp-header .doc-meta{ text-align:right; font-size:11px; color: var(--text-muted); line-height:1.5; }
-.kp-header .doc-meta strong{ color:var(--ink); font-size:12px; letter-spacing:.04em; }
+.kp-header .doc-meta{ text-align:right; font-size:12.5px; color: var(--text-muted); line-height:1.5; }
+.kp-header .doc-meta strong{ color:var(--ink); font-size:13.5px; letter-spacing:.04em; }
 
 .kp-eyebrow{
   color: var(--green-dark);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight:700;
   letter-spacing:.08em;
   text-transform:uppercase;
   margin-bottom:8px;
 }
+/* Заголовки (запит Анни, 2026-07-13: "збільшити заголовки так, щоб
+   заголовок за розміром суттєво відрізнявся від тексту") — .kp-title і
+   .section-title навмисно збільшені сильніше (+~30-40%), ніж звичайний
+   текст (+~10-15%), щоб контраст "заголовок vs текст" був явно
+   помітним на кожній сторінці, а не лише трохи більшим. */
 .kp-title{
-  font-size: 25px;
+  font-size: 33px;
   font-weight: 800;
-  line-height:1.25;
-  margin: 0 0 12px;
+  line-height:1.22;
+  margin: 0 0 14px;
   color: var(--ink);
 }
-.kp-desc{ font-size:13.5px; line-height:1.55; color:#333; margin-bottom:18px; }
+.kp-desc{ font-size:15px; line-height:1.6; color:#333; margin-bottom:18px; }
 .kp-desc b{ color:var(--ink); }
 
 /* Об'єкт / Виконавець збільшено й виділено як картки (запит Анни,
@@ -174,12 +179,12 @@ body{
   border-radius: 8px;
   padding: 12px 16px;
 }
-.meta-grid .k{ color:var(--text-muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
-.meta-grid .v{ font-weight:800; font-size:20px; color:var(--ink); }
+.meta-grid .k{ color:var(--text-muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
+.meta-grid .v{ font-weight:800; font-size:23px; color:var(--ink); }
 
 /* Заголовок над фото розташування панелей (запит Анни, 2026-07-07) —
    замінює підпис під фото з назвою файлу зображення. */
-.hero-caption-title{ font-size:16px; font-weight:800; color:var(--ink); margin-bottom:10px; }
+.hero-caption-title{ font-size:18px; font-weight:800; color:var(--ink); margin-bottom:10px; }
 .hero-img{
   width:100%;
   border-radius: var(--radius);
@@ -189,7 +194,7 @@ body{
   background:#f2f2f2;
 }
 .hero-img img{ width:100%; display:block; }
-.caption{ font-size:11px; color:var(--text-muted); margin-bottom:18px; }
+.caption{ font-size:12px; color:var(--text-muted); margin-bottom:18px; }
 
 /* ---------- Сторінка 3 — обкладинка (фікс переповнення при друку,
    2026-07-13) ----------
@@ -229,8 +234,8 @@ body{
   border-radius: 8px;
   padding: 12px 14px;
 }
-.stat-card .num{ font-size:19px; font-weight:800; color: var(--ink); }
-.stat-card .lbl{ font-size:10.5px; color:var(--text-muted); margin-top:2px; }
+.stat-card .num{ font-size:22px; font-weight:800; color: var(--ink); }
+.stat-card .lbl{ font-size:12px; color:var(--text-muted); margin-top:2px; }
 
 /* Картка з перемикачем місяця на сторінці "Фінансові показники" (запит
    Анни, 2026-07-08) — той самий акцентний стиль, що й .stat-card, але
@@ -247,11 +252,11 @@ body{
   padding: 14px 18px;
   margin-top: 16px;
 }
-.fin-month-card .lbl{ font-size:12px; color:var(--text-muted); margin-bottom:4px; }
-.fin-month-card .val{ font-size:22px; font-weight:800; color:var(--ink); }
+.fin-month-card .lbl{ font-size:13.5px; color:var(--text-muted); margin-bottom:4px; }
+.fin-month-card .val{ font-size:26px; font-weight:800; color:var(--ink); }
 .fin-month-card select{
   flex:none;
-  font-size:13px;
+  font-size:14px;
   font-weight:600;
   padding:8px 12px;
   border:1px solid var(--line);
@@ -260,20 +265,35 @@ body{
   color:var(--ink);
 }
 
+/* ---------- Сторінка "02" — фінансові показники: розподіл на всю
+   сторінку (запит Анни, 2026-07-13, "розподілити зміст на весь лист")
+   ----------
+   Раніше ця сторінка була простим .kp-page — контент (текст, benefit-
+   strip, картка місяця, 2 картки) просто йшов зверху вниз природною
+   висотою, лишаючи порожнечу внизу, якщо сумарна висота блоків менша за
+   --page-h. Фікс: сторінка стала фіксовано-висотним flex-стовпцем
+   (.fin-page, той самий патерн, що й .why-page/.cover-page/...), а
+   .fin-content — flex:1 і сам є flex-стовпцем з
+   justify-content:space-between, щоб браузер сам рівномірно розподілив
+   вертикальні проміжки між блоками на всю висоту, що лишилась під
+   заголовком. */
+.fin-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
+.fin-content{ flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; }
+
 .section-title{
   display:flex;
   align-items:center;
   gap:10px;
-  font-size: 16px;
+  font-size: 23px;
   font-weight:800;
   color: var(--ink);
-  margin: 0 0 16px;
+  margin: 0 0 18px;
 }
 .section-title .num-badge{
-  width:24px; height:24px; border-radius:6px;
+  width:30px; height:30px; border-radius:7px;
   background:var(--tint); color:var(--green-dark);
   display:flex; align-items:center; justify-content:center;
-  font-size:12px; font-weight:800;
+  font-size:14px; font-weight:800;
 }
 /* Виділена зеленим частина заголовка сторінки "04" (PvSyst) — 1:1 зі
    скріншоту референсу (запит Анни, 2026-07-13): "Ми створили
@@ -290,11 +310,17 @@ body{
    flex-колонка на всю висоту (--page-h), а .shading-layout — flex:1, щоб
    рядок з текстом і картинкою центрувався по вертикалі в залишку висоти
    під заголовком, а не тулився зверху з порожнечею знизу (запит Анни,
-   2026-07-13: "текст лівої сторони підняти вище, по центру листа"). */
+   2026-07-13: "текст лівої сторони підняти вище, по центру листа").
+   Оновлено 2026-07-13 (ще один запит того ж дня, "лучше разместить все
+   на листе, картинку пропорционально увеличить"): колонка картинки
+   розширена (1fr 1.35fr → 1fr 1.5fr), а сама .shading-img тепер займає
+   всю висоту рядка (display:flex + height:100%), а img масштабується
+   через object-fit:contain на всю доступну висоту, а не лише на ширину
+   колонки — картинка виходить помітно більшою. */
 .shading-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .shading-layout{
   display:grid;
-  grid-template-columns: 1fr 1.35fr;
+  grid-template-columns: 1fr 1.5fr;
   gap: 40px;
   align-items:center;
   flex: 1;
@@ -314,7 +340,7 @@ body{
 }
 .shading-item{
   position:relative;
-  font-size:13.5px;
+  font-size:15px;
   font-weight:700;
   line-height:1.4;
   color: var(--ink);
@@ -329,14 +355,16 @@ body{
   border:2px solid var(--green);
 }
 .shading-img{
+  height:100%;
+  display:flex; align-items:center; justify-content:center;
   border-radius: var(--radius);
   overflow:hidden;
   border:1px solid var(--line);
   background:#fff;
 }
-.shading-img img{ width:100%; display:block; }
+.shading-img img{ width:auto; height:100%; max-width:100%; object-fit:contain; display:block; }
 
-.kp-body p{ font-size:13px; line-height:1.6; color:#2b2f2e; }
+.kp-body p{ font-size:15px; line-height:1.65; color:#2b2f2e; }
 
 .gallery{
   display:grid;
@@ -346,7 +374,7 @@ body{
 }
 .gallery figure{ margin:0; }
 .gallery img{ width:100%; border-radius:8px; border:1px solid var(--line); display:block; }
-.gallery figcaption{ font-size:11px; color:var(--text-muted); margin-top:4px; }
+.gallery figcaption{ font-size:12px; color:var(--text-muted); margin-top:4px; }
 
 .split-list{
   display:grid;
@@ -354,7 +382,7 @@ body{
   gap: 10px 28px;
   margin-top: 6px;
 }
-.spec-item{ font-size:12.5px; line-height:1.5; padding-left:14px; position:relative; }
+.spec-item{ font-size:14px; line-height:1.5; padding-left:14px; position:relative; }
 .spec-item::before{
   content:"◆"; color: var(--green); font-size:9px;
   position:absolute; left:0; top:5px;
@@ -364,20 +392,20 @@ body{
 table.kp-table{
   width:100%;
   border-collapse:collapse;
-  font-size: 11.5px;
+  font-size: 13px;
 }
 table.kp-table th{
   background: var(--ink);
   color:#fff;
   text-align:left;
-  padding:7px 8px;
-  font-size:10.5px;
+  padding:8px 9px;
+  font-size:11.5px;
   text-transform:uppercase;
   letter-spacing:.02em;
 }
 table.kp-table th.num, table.kp-table td.num{ text-align:right; }
 table.kp-table td{
-  padding:6px 8px;
+  padding:7px 9px;
   border-bottom:1px solid var(--line);
 }
 table.kp-table tr.cat td{
@@ -393,9 +421,7 @@ table.kp-table tr.grand td{
 /* ---------- Сторінка "Бюджет реалізації" (запит Анни, 2026-07-13) ----------
    Таблиця 1:1 з референсного слайду: три групи (Обладнання / Витратні
    матеріали / Роботи), кожна з мержованою колонкою назви групи (вертикальний
-   напис) і мержованою колонкою підсумкової суми. Кольори наближені до
-   референсу, але побудовані на фірмовій палітрі (--ink / --green /
-   --green-dark), а не скопійовані піпеткою один в один.
+   напис) і мержованою колонкою підсумкової суми.
    Компактніші відступи/шрифт (2026-07-13, фікс переповнення при друку):
    при повному наборі рядків (динамічна кількість позицій "Обладнання" +
    по 5 фіксованих "Витратні матеріали"/"Роботи" = легко 17-23 рядки)
@@ -408,34 +434,51 @@ table.kp-table tr.grand td{
    другу сторінку — це не обрізає/не губить дані (на відміну від
    overflow:hidden-підходу), просто виглядає як зайва сторінка без
    логотипа; якщо це трапляється часто, варто обговорити з Анною окремий
-   дизайн "продовження" з повторним заголовком. */
+   дизайн "продовження" з повторним заголовком.
+   Оновлено 2026-07-13 (ІНШИЙ запит Анни того ж дня, "замість розділення
+   кольором розділів у таблиці зробити товщі нижні границі, створивши
+   рамку навколо кожного розділу"): кольорові фони груп (grp-equip/
+   grp-mat/grp-works, колишні --green/#4C7A72) і кольорові мержовані
+   комірки (.budget-cat/.budget-price, колишні --green-dark) прибрані —
+   таблиця тепер звичайна, текст на білому (як .kp-table), а межа між
+   групами позначається товстою нижньою границею (3px, var(--ink)) на
+   останньому рядку кожної групи через клас .group-last (додається в
+   kp-render.js, budgetGroupRows()). Також .budget-page — сторінка стала
+   фіксовано-висотним flex-стовпцем, а .budget-layout — flex:1 з
+   align-items:center, щоб бічна колонка приміток (.budget-notes)
+   вертикально центрувалась відносно ВСІЄЇ сторінки (запит "текст справа
+   опустити на середину листа"), а не лише висоти таблиці. */
+.budget-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .budget-layout{
   display:grid;
   grid-template-columns: 2.3fr 1fr;
   gap: 28px;
-  align-items:start;
+  align-items:center;
+  flex: 1;
+  min-height: 0;
   margin-top: 4px;
 }
 table.budget-table{
   width:100%;
   border-collapse:collapse;
-  font-size: 11.5px;
+  font-size: 13px;
+  border: 2px solid var(--ink);
 }
 table.budget-table th{
   background: var(--green-dark);
   color:#fff;
   text-align:left;
-  padding:8px 14px;
-  font-size:11px;
+  padding:9px 14px;
+  font-size:12.5px;
   font-weight:700;
   line-height:1.3;
 }
 table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:right; }
 table.budget-table td{
-  padding:6px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.16);
-  color:#fff;
+  padding:7px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
   vertical-align:middle;
 }
 table.budget-table td.num{ text-align:right; }
@@ -445,29 +488,30 @@ table.budget-table .budget-cat{
   transform: rotate(180deg);
   text-align:center;
   font-weight:800;
-  font-size:12px;
+  font-size:13px;
   letter-spacing:.03em;
-  background: var(--green-dark);
+  color: var(--ink);
   border-bottom: none;
   padding: 10px 10px;
 }
-table.budget-table .grp-equip{ background: var(--green); }
-table.budget-table .grp-works{ background: var(--green); }
-table.budget-table .grp-mat{ background: #4C7A72; }
 table.budget-table .budget-price{
-  background: var(--green-dark);
   font-weight:800;
-  font-size:15px;
+  font-size:16px;
   text-align:center;
+  color: var(--ink);
 }
-table.budget-table .grp-mat .budget-price{ background:#375D57; }
-table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:12px; }
-table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); }
-table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:14px; font-weight:800; }
+/* Товщі нижні границі замість кольорового розділення секцій (запит
+   Анни, 2026-07-13): останній рядок кожної групи (Обладнання/Витратні
+   матеріали/Роботи) отримує товсту нижню границю — візуально утворює
+   рамку навколо розділу. */
+table.budget-table tr.group-last td{ border-bottom: 3px solid var(--ink); }
+table.budget-table tfoot tr.sum{ background: var(--tint); font-weight:700; font-size:13px; color:var(--ink); }
+table.budget-table tfoot tr.sum td{ border-bottom: 1px solid var(--line); }
+table.budget-table tfoot tr.sum.grand{ background: var(--ink); color:#fff; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 
-.budget-notes{ display:flex; flex-direction:column; gap:16px; padding-top:6px; }
-.budget-notes .note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.5; color:#2b2f2e; }
+.budget-notes{ display:flex; flex-direction:column; gap:16px; }
+.budget-notes .note{ display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.55; color:#2b2f2e; }
 .budget-notes .note b{ color:var(--ink); }
 .budget-notes .chk{
   flex:none; width:20px; height:20px; border-radius:50%;
@@ -482,12 +526,12 @@ table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
   overflow:hidden;
   margin-top: 10px;
 }
-.cost-row{ display:flex; justify-content:space-between; padding:11px 16px; font-size:13px; border-bottom:1px solid var(--line);}
-.cost-row.total{ background: var(--ink); color:#fff; font-weight:800; font-size:15px; }
+.cost-row{ display:flex; justify-content:space-between; padding:11px 16px; font-size:14.5px; border-bottom:1px solid var(--line);}
+.cost-row.total{ background: var(--ink); color:#fff; font-weight:800; font-size:16.5px; }
 .pay-split{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;}
 .pay-card{ border:1px solid var(--line); border-radius:8px; padding:12px 14px;}
-.pay-card .amt{ font-size:17px; font-weight:800; color:var(--ink); }
-.pay-card .lbl{ font-size:10.5px; color:var(--text-muted); text-transform:uppercase; }
+.pay-card .amt{ font-size:19px; font-weight:800; color:var(--ink); }
+.pay-card .lbl{ font-size:11.5px; color:var(--text-muted); text-transform:uppercase; }
 
 .benefit-strip{
   display:grid; grid-template-columns: 1.2fr 1fr; gap:12px; margin-top:16px;
@@ -495,9 +539,9 @@ table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 .benefit-box{ border-radius:8px; padding:16px; }
 .benefit-box.green{ background: var(--green); color:#fff; }
 .benefit-box.dark{ background: var(--ink); color:#fff; }
-.benefit-box .big{ font-size:26px; font-weight:800; }
-.benefit-box .cap{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; opacity:.85; margin-bottom:4px; }
-.benefit-box .sub{ font-size:11px; opacity:.85; margin-top:6px; }
+.benefit-box .big{ font-size:30px; font-weight:800; }
+.benefit-box .cap{ font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; opacity:.85; margin-bottom:4px; }
+.benefit-box .sub{ font-size:12px; opacity:.85; margin-top:6px; }
 
 .chart-wrap{ margin-top:46px; border:1px solid var(--line); border-radius:var(--radius); padding:22px 16px 16px; }
 .chart-wrap canvas{ max-height:340px; }
@@ -539,7 +583,7 @@ table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 .warranty-page .logo{ height:28px; display:block; margin-bottom:24px; align-self:flex-start; }
 .warranty-banner{
   background: var(--green); color:#fff;
-  font-size:22px; font-weight:800;
+  font-size:26px; font-weight:800;
   padding:16px var(--page-pad);
   margin: 0 calc(-1 * var(--page-pad)) 0;
 }
@@ -548,14 +592,14 @@ table.warranty-table{
   width:100%;
   height:100%;
   border-collapse:collapse;
-  font-size: 13px;
+  font-size: 15px;
 }
 table.warranty-table th{
   background: #4C7A72;
   color:#fff;
   text-align:left;
   padding:14px var(--page-pad);
-  font-size:13px;
+  font-size:15px;
   font-weight:700;
 }
 table.warranty-table td{
@@ -570,16 +614,36 @@ table.warranty-table td.wu, table.warranty-table td.wu-life{
   color: var(--text-muted);
   border-left: 1px solid var(--line);
 }
-table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14px; }
+table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:16px; }
+/* Гарантійні терміни (запит Анни, 2026-07-13: "зробити можливим вписувати
+   в кожній строке гарантійні терміни руками") — комірки "Гарантія"/
+   "Термін використання*" тепер contenteditable (kp-render.js). Легкий
+   візуальний натяк, що поле редаговане — курсор-текст, підсвітка на
+   ховер і рамка у фокусі; на друк/у PDF (html2canvas знімає живий DOM у
+   момент кліку по кнопці) впливає лише як звичайний текст, ці стани не
+   потрапляють у знімок. */
+table.warranty-table td[contenteditable]{ cursor:text; }
+table.warranty-table td[contenteditable]:hover{ background: var(--tint); }
+table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); outline-offset:-2px; background: var(--tint-2); }
 
 /* ---------- Остання сторінка — контакти менеджера ----------
    Персональна "візитка" менеджера, який веде цей об'єкт (запит Анни,
    2026-07-13). Так само немає .kp-header/.section-title — лише логотип
    зверху, точно як на скріншоті. Фото — фіксоване співвідношення сторін
    3:4 (object-fit:cover, щоб не спотворювалось незалежно від пропорцій
-   оригіналу), ім'я/посада — під фото зліва (не поверх фото). */
-.manager-page .logo{ height:26px; display:block; margin-bottom:40px; }
-.manager-body{ display:flex; gap:56px; align-items:flex-start; }
+   оригіналу), ім'я/посада — під фото зліва (не поверх фото).
+   Оновлено 2026-07-13 (запит Анни, "гармонійно розподілити по листу"):
+   сторінка раніше була простим .kp-page — логотип + картка сиділи
+   зверху, лишаючи багато порожнечі знизу. Тепер .manager-page —
+   фіксовано-висотний flex-стовпець (той самий патерн, що й
+   .warranty-page/.why-page/...), а .manager-body — flex:1 з
+   align-items:center, тому фото+контакти вертикально центруються в усій
+   висоті сторінки, а не тиснуться зверху. align-self:flex-start на
+   логотипі — та сама причина, що й на .warranty-page .logo вище (без
+   цього логотип розтягнеться на всю ширину як прямий child flex-колонки). */
+.manager-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
+.manager-page .logo{ height:26px; display:block; margin-bottom:40px; align-self:flex-start; }
+.manager-body{ display:flex; gap:56px; align-items:center; flex:1; min-height:0; }
 .manager-photo-col{ flex: 0 0 300px; }
 .manager-photo{
   width:100%;
@@ -589,32 +653,32 @@ table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14
   background:#eee;
 }
 .manager-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
-.manager-name{ font-size:16px; font-weight:800; color:var(--green-dark); margin-top:14px; }
-.manager-role{ font-size:12.5px; color:var(--text-muted); font-weight:600; margin-top:2px; }
+.manager-name{ font-size:19px; font-weight:800; color:var(--green-dark); margin-top:14px; }
+.manager-role{ font-size:14px; color:var(--text-muted); font-weight:600; margin-top:2px; }
 .manager-contacts{ flex:1; padding-top: 20px; display:flex; flex-direction:column; gap:28px; }
 .manager-contacts .mc-row{ display:flex; gap:48px; }
-.manager-contacts .mc-title{ font-size:14px; font-weight:800; color:var(--green-dark); margin-bottom:6px; }
-.manager-contacts .mc-val{ font-size:15px; color:var(--ink); line-height:1.5; }
+.manager-contacts .mc-title{ font-size:17px; font-weight:800; color:var(--green-dark); margin-bottom:6px; }
+.manager-contacts .mc-val{ font-size:17px; color:var(--ink); line-height:1.5; }
 .manager-contacts .mc-val a{ color:var(--ink); text-decoration: underline; }
 
 .terms-list{ margin-top:8px; }
-.terms-list .t-row{ display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:12.5px;}
+.terms-list .t-row{ display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:14px;}
 .terms-list .t-row b{ min-width:150px; color:var(--ink); }
 
 .kp-footer{
   position:absolute; left:var(--page-pad); right:var(--page-pad); bottom: var(--page-pad);
   display:flex; justify-content:space-between; align-items:flex-end;
   padding-top: 14px; border-top:1px solid var(--line);
-  font-size:10.5px; color:var(--text-muted);
+  font-size:12px; color:var(--text-muted);
 }
 .footer-dark{
   background: var(--ink); color:#fff; border-radius:var(--radius);
   padding:18px 20px; display:flex; justify-content:space-between; margin-top:22px;
 }
-.footer-dark .fname{ font-weight:800; font-size:15px; }
-.footer-dark .fsub{ font-size:11px; opacity:.8; margin-top:2px; }
-.footer-dark .fcontact{ text-align:right; font-size:11.5px; line-height:1.6; }
-.disclaimer{ font-size:10px; color:var(--text-muted); margin-top:14px; line-height:1.5; }
+.footer-dark .fname{ font-weight:800; font-size:17px; }
+.footer-dark .fsub{ font-size:12.5px; opacity:.8; margin-top:2px; }
+.footer-dark .fcontact{ text-align:right; font-size:13px; line-height:1.6; }
+.disclaimer{ font-size:11.5px; color:var(--text-muted); margin-top:14px; line-height:1.55; }
 
 /* ---------- Сторінка 1 — титульний слайд (фото + напис) ----------
    Взято з референсної презентації (запит Анни, 2026-07-07): фото сонячної
@@ -633,7 +697,7 @@ table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14
 .hero-logo{ position:absolute; top:40px; left:46px; height:32px; z-index:2; }
 .hero-title{
   position:absolute; left:46px; bottom:52px; z-index:2;
-  color:#fff; font-size:38px; font-weight:800; line-height:1.2;
+  color:#fff; font-size:40px; font-weight:800; line-height:1.2;
   max-width:60%; text-shadow: 0 2px 10px rgba(0,0,0,.25);
 }
 
@@ -649,7 +713,7 @@ table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14
 .why-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .why-banner{
   background: var(--green); color:#fff;
-  font-size:24px; font-weight:800;
+  font-size:28px; font-weight:800;
   padding:16px var(--page-pad);
   margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 26px;
 }
@@ -660,14 +724,39 @@ table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14
 .why-cert{ flex: 0 0 380px; height:100%; }
 .why-cert img{ width:100%; height:100%; object-fit:contain; border-radius:10px; border:1px solid var(--line); display:block; }
 .why-content{ flex:1; display:flex; flex-direction:column; justify-content:center; min-width:0; }
-.why-point{ display:flex; align-items:flex-start; gap:12px; font-size:17px; font-weight:600; color:var(--ink); margin-bottom:18px; }
+.why-point{ display:flex; align-items:flex-start; gap:12px; font-size:18px; font-weight:600; color:var(--ink); margin-bottom:18px; }
 .why-point .chk{
   flex:none; width:26px; height:26px; border-radius:50%;
   background: var(--tint); color:var(--green-dark);
   display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800;
 }
-.why-logos{ display:grid; grid-template-columns: repeat(3,1fr); gap:22px; margin-top:14px; }
-.why-logos img{ width:100%; height:92px; object-fit:contain; border-radius:6px; }
+/* Сітка логотипів асоціацій — 2 колонки x 3 рядки (запит Анни,
+   2026-07-13: "два стовпчики по три плашки", було 3 колонки x 2 рядки).
+   Кожна плашка обгорнута в .logo-tile — однакова фіксована висота-рамка
+   (з рамкою й фоном) для всіх, щоб вони виглядали ОДНАКОВОГО РОЗМІРУ
+   незалежно від пропорцій вихідного файлу-логотипа (раніше кожен img
+   мав свою природну ширину/висоту всередині object-fit:contain, тому
+   різні логотипи виглядали різного "візуального" розміру). Менша
+   кількість колонок + більша висота плашки природньо заповнюють
+   сторінку краще (запит "менше білих полів"). */
+.why-logos{ display:grid; grid-template-columns: repeat(2,1fr); gap: 20px 26px; margin-top:16px; }
+.logo-tile{
+  height: 128px;
+  display:flex; align-items:center; justify-content:center;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding: 12px 20px;
+}
+.logo-tile img{ max-width:100%; max-height:100%; object-fit:contain; }
+/* "СУП" (Спілка Українських Підприємців) — текстова плашка замість
+   растрового файлу (запит Анни, 2026-07-13: "плашка... синие буквы на
+   белом фоне" — оригінальний jpg мав темний навколо-чорний фон, який не
+   пасував до решти білих плашок і був погано читабельним). Колір — той
+   самий синій, що й в оригінальному лого. */
+.why-logo-sup{ flex-direction:column; color:#0026FE; text-align:center; }
+.why-logo-sup .sup-abbr{ font-size:30px; font-weight:900; line-height:1; letter-spacing:.02em; }
+.why-logo-sup .sup-full{ font-size:12.5px; font-weight:700; line-height:1.3; margin-top:6px; }
 
 /* ---------- Друк ---------- */
 @media print{
@@ -680,7 +769,12 @@ table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:14
      а титульна сторінка (фото заходу + білий текст/лого поверх) стала
      ПОВНІСТЮ БІЛОЮ (білий текст і білий логотип на білому тлі — фото
      просто не надрукувалось). Це правило змушує браузер завжди
-     друкувати фон незалежно від стану тієї галочки. */
+     друкувати фон незалежно від стану тієї галочки.
+     ПРИМІТКА (2026-07-13, пізніше того ж дня): відтоді PDF формується
+     через html2canvas + jsPDF (див. app.js, handleSavePdf()), а не
+     нативний window.print()/@media print — це правило й решта блоку
+     @media print більше не задіяні в основному сценарії, але лишені в
+     коді на випадок, якщо хтось відкриє КП через Cmd+P напряму. */
   *{
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
