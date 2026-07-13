@@ -327,7 +327,7 @@ table.budget-table{
   font-size: 12px;
 }
 table.budget-table th{
-  background: var(--ink);
+  background: var(--green-dark);
   color:#fff;
   text-align:left;
   padding:12px 14px;
@@ -335,6 +335,7 @@ table.budget-table th{
   font-weight:700;
   line-height:1.35;
 }
+table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:right; }
 table.budget-table td{
   padding:10px 14px;
@@ -351,7 +352,7 @@ table.budget-table .budget-cat{
   font-weight:800;
   font-size:12.5px;
   letter-spacing:.03em;
-  background: var(--ink);
+  background: var(--green-dark);
   border-bottom: none;
   padding: 16px 10px;
 }
@@ -365,9 +366,9 @@ table.budget-table .budget-price{
   text-align:center;
 }
 table.budget-table .grp-mat .budget-price{ background:#375D57; }
-table.budget-table tfoot tr.sum{ background: var(--ink); font-weight:700; font-size:12.5px; }
+table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:12.5px; }
 table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); }
-table.budget-table tfoot tr.sum.grand{ background:#0D1512; font-size:15px; font-weight:800; }
+table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 
 .budget-notes{ display:flex; flex-direction:column; gap:16px; padding-top:6px; }
