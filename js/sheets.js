@@ -123,6 +123,14 @@
       currentCat.items.push({
         code: a,
         name,
+        row: i + 1, // реальний номер рядка на вкладці (1-індексований, "B3"=3) —
+        // навмисно зберігаємо, бо позиція в масиві НЕ завжди співпадає з
+        // номером рядка (порожні/нульові рядки-заглушки пропускаються вище,
+        // тому "8-й елемент масиву" міг непомітно виявитись рядком 11, а не
+        // рядком 10 — саме так у бюджет просочувався сторонній рядок
+        // "Доставка до нас..."). Все, що фільтрує позиції за конкретним
+        // діапазоном рядків (див. findBudgetEquipItems() у kp-render.js),
+        // має звірятись з цим полем, а не з індексом у масиві.
         qty: qty || 0,
         unitNetto: unit || 0,
         lineNetto: lineNetto != null ? lineNetto : (unit || 0) * (qty || 0),
@@ -137,23 +145,71 @@
   }
 
   // ---------- Бюджет реалізації (сторінка "03 Бюджет реалізації") ----------
-  // Фіксовані комірки вкладки ПДВ стандартного шаблону файла-розрахунку
-  // (запит Анни, 2026-07-13): L2 — підсумок групи "Обладнання" (сума
-  // продажу нетто без ПДВ категорії "Основне технічне обладнання та
-  // система кріплення"), L12 — підсумок групи "Витратні матеріали", L22 —
-  // підсумок групи "Роботи", L32 — "Разом без ПДВ" по всьому кошторису,
-  // E44 — "Загальна вартість з ПДВ". ПДВ рахуємо самі як E44 - L32, бо
-  // окремої комірки саме під цю різницю в шаблоні немає.
-  function cellAt(rows, r, c) {
-    return rows[r] && rows[r][c] != null ? rows[r][c] : null;
+  // ПЕРЕРОБЛЕНО (2026-07-14): раніше групові підсумки й "Разом без ПДВ" /
+  // "Загальна вартість з ПДВ" читались за ФІКСОВАНИМИ адресами комірок
+  // (L2/L12/L22/L32/E44), у припущенні що кожен блок категорії в ПДВ-таблиці
+  // завжди рівно 10 рядків. У реальних файлах це не так — зайвий нетоварний
+  // рядок (як-от "Доставка до нас...") чи задвоєна нумерація зсуває всі
+  // наступні категорії вниз, і фіксовані адреси тоді читають геть не ті
+  // комірки (звідси й "зникнення" сум — вони мовчки ставали null/0).
+  // Тепер підсумки рахуються з уже розібраних `categories` (кожен `item`
+  // несе свій справжній номер рядка, див. `row` у parsePdvSheet вище) —
+  // це працює правильно незалежно від того, скільки зайвих/порожніх рядків
+  // трапилось у файлі.
+  function findEquipCategoryIndex(categories) {
+    return categories.findIndex((c) => {
+      const n = c.name.toLowerCase();
+      return n.includes("техн") && n.includes("облад");
+    });
   }
-  function parseBudgetCells(rows) {
-    const equipmentCost = numeric(cellAt(rows, 1, 11));   // L2  (row idx1, col L = idx11)
-    const materialsCost = numeric(cellAt(rows, 11, 11));  // L12 (row idx11)
-    const worksCost = numeric(cellAt(rows, 21, 11));      // L22 (row idx21)
-    const nettoTotal = numeric(cellAt(rows, 31, 11));     // L32 (row idx31)
-    const grossTotal = numeric(cellAt(rows, 43, 4));      // E44 (row idx43, col E = idx4)
-    const vat = (grossTotal != null && nettoTotal != null) ? grossTotal - nettoTotal : null;
+  function sumLineNetto(items) {
+    return (items || []).reduce((s, it) => s + (it.lineNetto || 0), 0);
+  }
+  // ПДВ-ставка: шукаємо в файлі комірку, де в тому самому тексті трапляється
+  // і "ПДВ", і відсоток (напр. " обов'язок ПДВ 20%") — так само, як інші
+  // парсери в цьому проєкті, за текстом, а не за координатами. Якщо в
+  // конкретному файлі такого підпису нема — використовуємо стандартну
+  // українську ставку 20% як розумний дефолт (а не залишаємо суму порожньою).
+  function findVatPercent(rows) {
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r] || [];
+      for (let c = 0; c < row.length; c++) {
+        const raw = row[c];
+        if (raw == null) continue;
+        if (!norm(raw).includes("пдв")) continue;
+        const m = String(raw).match(/(\d+(?:[.,]\d+)?)\s*%/);
+        if (m) return parseFloat(m[1].replace(",", "."));
+      }
+    }
+    return null;
+  }
+  // Діапазон рядків для позицій обладнання, що виводяться в таблиці
+  // бюджету — B3:B10 (запит Анни, 2026-07-13/07-14): див. однойменну
+  // константу KP_CONFIG.BUDGET_EQUIP_ROW_RANGE (config.js) та
+  // findBudgetEquipItems() у kp-render.js, яка застосовує той самий
+  // діапазон до списку, що показується в таблиці. Тут — ті самі 8 позицій
+  // (за реальним номером рядка, не за індексом масиву) враховуються і в
+  // ціну групи "Обладнання", щоб сума завжди відповідала показаним рядкам.
+  function parseBudgetCells(pdv, rows) {
+    const range = (window.KP_CONFIG && window.KP_CONFIG.BUDGET_EQUIP_ROW_RANGE) || { start: 3, end: 10 };
+    const equipIdx = findEquipCategoryIndex(pdv.categories);
+    const equipCat = equipIdx >= 0 ? pdv.categories[equipIdx] : null;
+    const equipItems = equipCat
+      ? equipCat.items.filter((it) => it.row != null && it.row >= range.start && it.row <= range.end)
+      : [];
+    const materialsCat = equipIdx >= 0 ? pdv.categories[equipIdx + 1] : null;
+    const worksCat = equipIdx >= 0 ? pdv.categories[equipIdx + 2] : null;
+
+    const equipmentCost = sumLineNetto(equipItems);
+    const materialsCost = sumLineNetto(materialsCat && materialsCat.items);
+    const worksCost = sumLineNetto(worksCat && worksCat.items);
+    const nettoTotal = equipmentCost + materialsCost + worksCost;
+
+    const vatPercent = findVatPercent(rows);
+    const vatRate = vatPercent != null ? vatPercent / 100 : 0.2; // 0.2 = дефолт 20%, якщо не знайдено в файлі
+    const grossTotal = nettoTotal * (1 + vatRate);
+    const vat = grossTotal - nettoTotal;
+
     return { equipmentCost, materialsCost, worksCost, nettoTotal, grossTotal, vat };
   }
 
@@ -246,10 +302,11 @@
       fetchSheetValues(id, window.KP_CONFIG.SHEET_TAB_PDV),
       fetchSheetValues(id, window.KP_CONFIG.SHEET_TAB_MODEL),
     ]);
+    const pdv = parsePdvSheet(pdvRows);
     return {
-      pdv: parsePdvSheet(pdvRows),
+      pdv,
       model: parseModelSheet(modelRows),
-      budget: parseBudgetCells(pdvRows),
+      budget: parseBudgetCells(pdv, pdvRows),
     };
   }
 
@@ -273,7 +330,7 @@ window.KpSheets.getSpreadsheetTitle = async function (sheetUrlOrId) {
 
 // Назва об'єкта береться з комірки A1 вкладки "Кошторис_Наявність
 // обладнання" (KP_CONFIG.SHEET_TAB_OBJECT_NAME) — саме туди менеджери
-// вписують робочу назву об'єкта (напр. "№ Гранд марин (попередньо)").
+// вписують робочу назву об'єкта (напр. "№ [назва об'єкта] (попередньо)").
 window.KpSheets.getObjectNameFromSheet = async function (sheetUrlOrId) {
   const id = window.KpSheets.extractSpreadsheetId(sheetUrlOrId);
   const key = window.KP_CONFIG.GOOGLE_API_KEY;
