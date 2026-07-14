@@ -74,7 +74,7 @@
           <div class="why-point"><span class="chk">✓</span> Ми є членами таких асоціацій:</div>
           <div class="why-logos">
             <div class="logo-tile"><img src="assets/logo-women.jpg" alt="Жіночий енергоклуб України"/></div>
-            <div class="logo-tile"><img src="data:image/jpeg;base64,${SUP_LOGO_B64}" alt="Спілка Українських Підприємців"/></div>
+            <div class="logo-tile"><img src="assets/logo-sup-white.jpg" alt="Спілка Українських Підприємців"/></div>
             <div class="logo-tile"><img src="assets/logo-asau.jpg" alt="Асоціація сонячної енергетики України"/></div>
             <div class="logo-tile"><img src="assets/logo-tpp.jpg" alt="Торгово-Промислова палата України"/></div>
             <div class="logo-tile"><img src="assets/logo-onpu.jpg" alt="Одеська політехніка"/></div>
