@@ -365,15 +365,26 @@ table.budget-table td{
 table.budget-table td.num{ text-align:center; }
 table.budget-table tbody tr:last-child td{ border-bottom:none; }
 table.budget-table .budget-cat{
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
   text-align:center;
+  background: var(--green-dark);
+  border-bottom: none;
+  padding: 5px 4px;
+}
+/* Вертикальний підпис категорії (2026-07-14, запит Анни): раніше тут був
+   writing-mode:vertical-rl + transform:rotate(180deg) на самій td — виглядало
+   правильно в браузері, але html2canvas (яким рендериться PDF, див.
+   handleSavePdf() в app.js) НЕ підтримує writing-mode і ламав цей текст у
+   збереженому PDF. Замінено на найпростіший rotate(-90deg) звичайного
+   горизонтального тексту у внутрішньому <span> — це проста трансформація
+   елемента (не зміна напрямку тексту), яку html2canvas рендерить коректно,
+   тож PDF тепер гарантовано збігається з тим, що на екрані. */
+table.budget-table .budget-cat span{
+  display:inline-block;
+  white-space:nowrap;
   font-weight:800;
   font-size:13px;
   letter-spacing:.03em;
-  background: var(--green-dark);
-  border-bottom: none;
-  padding: 5px 10px;
+  transform: rotate(-90deg);
 }
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
