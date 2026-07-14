@@ -364,45 +364,69 @@ table.budget-table td{
 }
 table.budget-table td.num{ text-align:center; }
 table.budget-table tbody tr:last-child td{ border-bottom:none; }
+/* Rowspan-комірки категорії й ціни групи (2026-07-14, запит Анни, "PDF має
+   1-в-1 збігатись із веб-сторінкою"): у html2canvas (яким рендериться PDF,
+   див. handleSavePdf() в app.js) виявлено ДВІ окремі проблеми з цими td:
+   1) writing-mode:vertical-rl (вертикальний підпис категорії) html2canvas
+      не підтримує зовсім — текст ламався/розсипався;
+   2) vertical-align:middle для td з rowspan html2canvas рахує неправильно —
+      фон комірки малюється на всю висоту коректно, а текст всередині просто
+      зникає зі знімка (перевірено: DOM містить текст, canvas — ні).
+   Обидві проблеми вирішено ОДНИМ способом: td більше не покладається на
+   browser table-layout для позиціювання тексту (ні vertical-align, ні
+   writing-mode) — td лише малює фон комірки на всю висоту rowspan, а
+   реальний текст живе у внутрішньому <span style="position:absolute">,
+   відцентрованому вручну через top/left:50% + transform. Це звичайна
+   трансформація елемента (не залежить від алгоритму верстки таблиць), яку
+   html2canvas рендерить однаково коректно і в браузері, і в PDF. */
 table.budget-table .budget-cat{
+  position: relative;
+  vertical-align: top;
   text-align:center;
   background: var(--green-dark);
   border-bottom: none;
   padding: 5px 4px;
 }
-/* Вертикальний підпис категорії (2026-07-14, запит Анни): раніше тут був
-   writing-mode:vertical-rl + transform:rotate(180deg) на самій td — виглядало
-   правильно в браузері, але html2canvas (яким рендериться PDF, див.
-   handleSavePdf() в app.js) НЕ підтримує writing-mode і ламав цей текст у
-   збереженому PDF. Замінено на найпростіший rotate(-90deg) звичайного
-   горизонтального тексту у внутрішньому <span> — це проста трансформація
-   елемента (не зміна напрямку тексту), яку html2canvas рендерить коректно,
-   тож PDF тепер гарантовано збігається з тим, що на екрані. */
+table.budget-table .budget-price{
+  position: relative;
+  vertical-align: top;
+  background: var(--green-dark);
+}
+table.budget-table .budget-cat span,
+table.budget-table .budget-price span{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  white-space: nowrap;
+}
 table.budget-table .budget-cat span{
+  transform: translate(-50%, -50%) rotate(-90deg);
   display:inline-block;
-  white-space:nowrap;
   font-weight:800;
   font-size:13px;
   letter-spacing:.03em;
-  transform: rotate(-90deg);
+}
+table.budget-table .budget-price span{
+  transform: translate(-50%, -50%);
+  font-weight:800;
+  font-size:15.5px;
 }
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
 table.budget-table .grp-mat{ background: #4C7A72; }
-table.budget-table .budget-price{
-  background: var(--green-dark);
-  font-weight:800;
-  font-size:15.5px;
-  text-align:center;
-}
 table.budget-table .grp-mat .budget-price{ background:#375D57; }
 table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13.5px; }
 table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; }
 table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
-table.budget-table td[contenteditable]{ cursor:text; }
+table.budget-table [contenteditable]{ cursor:text; }
 table.budget-table td[contenteditable]:hover{ background: rgba(255,255,255,.16); }
 table.budget-table td[contenteditable]:focus{ outline:2px solid #fff; outline-offset:-2px; background: rgba(255,255,255,.24); }
+/* .budget-price тепер contenteditable на внутрішньому <span> (не td, див.
+   коментар вище над .budget-cat/.budget-price) — окремі hover/focus стилі,
+   бо span не заповнює всю rowspan-комірку, як раніше робив td. */
+table.budget-table .budget-price span[contenteditable]:hover{ background: rgba(255,255,255,.16); }
+table.budget-table .budget-price span[contenteditable]:focus{ outline:2px solid #fff; outline-offset:-2px; background: rgba(255,255,255,.24); }
 .budget-notes{ display:flex; flex-direction:column; gap:16px; }
 .budget-notes .note{ display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.55; color:#2b2f2e; }
 .budget-notes .note > div{ text-align:center; }
