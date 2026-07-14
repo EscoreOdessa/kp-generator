@@ -13,9 +13,6 @@
   --text-muted: #5B6864;
   --white: #FFFFFF;
   --radius: 10px;
-  /* A4 landscape при 96dpi (перевели весь шаблон з книжної на альбомну
-     орієнтацію 2026-07-07, щоб вмістити альбомні титульний слайд і слайд
-     "Чому саме ESCORE?" з референсної презентації — запит Анни). */
   --page-w: 1123px;
   --page-h: 794px;
   --page-pad: 46px;
@@ -28,8 +25,6 @@ body{
   color: var(--text);
   background: #ECEFED;
 }
-
-/* ---------- Форма (не друкується) ---------- */
 .form-shell{
   max-width: 760px;
   margin: 24px auto;
@@ -72,7 +67,6 @@ body{
 .field input[type=file]{ font-size: 13px; }
 .row2{ display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .row3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-
 .dropzone{
   position: relative;
   border: 2px dashed #D3D9D5;
@@ -89,7 +83,6 @@ body{
 }
 .dropzone-hint{ font-size: 12px; color: var(--text-muted); pointer-events: none; }
 .dropzone-filename{ font-size: 12.5px; color: var(--ink-2); font-weight: 600; margin-top: 4px; pointer-events: none; }
-
 .btn{
   display:inline-block;
   background: var(--green);
@@ -111,14 +104,10 @@ body{
 .actions{ display:flex; gap:12px; margin-top: 22px; align-items:center; }
 .status-msg{ font-size: 13px; color: var(--text-muted); }
 .status-msg.error{ color:#B3261E; }
-
 .thumb-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .thumb-list img{ width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid #D3D9D5; }
-
-/* ---------- Документ КП ---------- */
 #kp-doc{ display:none; }
 #kp-doc.ready{ display:block; }
-
 .kp-page{
   width: var(--page-w);
   min-height: var(--page-h);
@@ -128,7 +117,6 @@ body{
   position: relative;
   box-shadow: 0 1px 4px rgba(0,0,0,.12);
 }
-
 .kp-header{
   display:flex;
   justify-content:space-between;
@@ -140,7 +128,6 @@ body{
 .kp-header img.logo{ height: 30px; }
 .kp-header .doc-meta{ text-align:right; font-size:12.5px; color: var(--text-muted); line-height:1.5; }
 .kp-header .doc-meta strong{ color:var(--ink); font-size:13.5px; letter-spacing:.04em; }
-
 .kp-eyebrow{
   color: var(--green-dark);
   font-size: 12.5px;
@@ -149,11 +136,6 @@ body{
   text-transform:uppercase;
   margin-bottom:8px;
 }
-/* Заголовки (запит Анни, 2026-07-13: "збільшити заголовки так, щоб
-   заголовок за розміром суттєво відрізнявся від тексту") — .kp-title і
-   .section-title навмисно збільшені сильніше (+~30-40%), ніж звичайний
-   текст (+~10-15%), щоб контраст "заголовок vs текст" був явно
-   помітним на кожній сторінці, а не лише трохи більшим. */
 .kp-title{
   font-size: 33px;
   font-weight: 800;
@@ -163,10 +145,6 @@ body{
 }
 .kp-desc{ font-size:15px; line-height:1.6; color:#333; margin-bottom:18px; }
 .kp-desc b{ color:var(--ink); }
-
-/* Об'єкт / Виконавець збільшено й виділено як картки (запит Анни,
-   2026-07-07) — той самий стиль зеленої акцентної смуги, що й у
-   .stat-card, щоб ці два поля впадали в очі одразу після заголовка. */
 .meta-grid{
   display:grid;
   grid-template-columns: repeat(2,1fr);
@@ -181,9 +159,6 @@ body{
 }
 .meta-grid .k{ color:var(--text-muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
 .meta-grid .v{ font-weight:800; font-size:23px; color:var(--ink); }
-
-/* Заголовок над фото розташування панелей (запит Анни, 2026-07-07) —
-   замінює підпис під фото з назвою файлу зображення. */
 .hero-caption-title{ font-size:18px; font-weight:800; color:var(--ink); margin-bottom:10px; }
 .hero-img{
   width:100%;
@@ -195,38 +170,18 @@ body{
 }
 .hero-img img{ width:100%; display:block; }
 .caption{ font-size:12px; color:var(--text-muted); margin-bottom:18px; }
-
-/* ---------- Сторінка 3 — обкладинка (фікс переповнення при друку,
-   2026-07-13) ----------
-   Раніше ця сторінка була простим .kp-page з природним min-height —
-   на екрані це просто робило сторінку вищою за --page-h (непомітно, бо
-   ніхто не гортає "цю картинку" далі), але при РЕАЛЬНОМУ друці/збереженні
-   в PDF (@media print знімає min-height, залишає лише page-break-after)
-   контент, який не влазив у одну фізичну сторінку A4, просто "перетікав"
-   на наступну фізичну сторінку PDF БЕЗ повторного логотипа/шапки —
-   Анна надіслала такий зламаний PDF, де фото розташування панелей +
-   4 картки опинялись на "сирітській" сторінці без заголовка. Фікс: та
-   сама flex-колонка фіксованої висоти (--page-h) + overflow:hidden, що
-   вже використовується на інших сторінках (.why-page/.shading-page/...),
-   а фото розташування панелей (.cover-page .hero-img) робимо flex:1 і
-   масштабуємо через object-fit:contain — фото просто МЕНШЕ, якщо не
-   влазить, а не обрізається і не "тікає" на іншу сторінку. */
 .cover-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .cover-page .hero-img{
   flex:1; min-height:0;
   display:flex; align-items:center; justify-content:center;
 }
 .cover-page .hero-img img{ width:auto; height:100%; max-width:100%; object-fit:contain; }
-
 .stat-cards{
   display:grid;
   grid-template-columns: repeat(4,1fr);
   gap: 12px;
   margin-top: 16px;
 }
-/* Модифікатор для сторінок з меншою кількістю карток (напр. "Фінансові
-   показники" — 2 картки), щоб вони не губились у 4-колонковій сітці
-   (запит Анни, 2026-07-08). */
 .stat-cards.cols-2{ grid-template-columns: repeat(2,1fr); }
 .stat-card{
   border:1px solid var(--line);
@@ -236,11 +191,6 @@ body{
 }
 .stat-card .num{ font-size:22px; font-weight:800; color: var(--ink); }
 .stat-card .lbl{ font-size:12px; color:var(--text-muted); margin-top:2px; }
-
-/* Картка з перемикачем місяця на сторінці "Фінансові показники" (запит
-   Анни, 2026-07-08) — той самий акцентний стиль, що й .stat-card, але
-   ширша (на всю ширину) і з <select> праворуч. Сам <select> прихований на
-   друку класом .no-print — залишається лише вже підставлене значення. */
 .fin-month-card{
   display:flex;
   align-items:center;
@@ -264,22 +214,8 @@ body{
   background:var(--white);
   color:var(--ink);
 }
-
-/* ---------- Сторінка "02" — фінансові показники: розподіл на всю
-   сторінку (запит Анни, 2026-07-13, "розподілити зміст на весь лист")
-   ----------
-   Раніше ця сторінка була простим .kp-page — контент (текст, benefit-
-   strip, картка місяця, 2 картки) просто йшов зверху вниз природною
-   висотою, лишаючи порожнечу внизу, якщо сумарна висота блоків менша за
-   --page-h. Фікс: сторінка стала фіксовано-висотним flex-стовпцем
-   (.fin-page, той самий патерн, що й .why-page/.cover-page/...), а
-   .fin-content — flex:1 і сам є flex-стовпцем з
-   justify-content:space-between, щоб браузер сам рівномірно розподілив
-   вертикальні проміжки між блоками на всю висоту, що лишилась під
-   заголовком. */
 .fin-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .fin-content{ flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; }
-
 .section-title{
   display:flex;
   align-items:center;
@@ -295,49 +231,13 @@ body{
   display:flex; align-items:center; justify-content:center;
   font-size:14px; font-weight:800;
 }
-/* Виділена зеленим частина заголовка сторінки "04" (PvSyst) — 1:1 зі
-   скріншоту референсу (запит Анни, 2026-07-13): "Ми створили
-   імітаційну модель вашої СЕС та врахували:", де середня частина
-   виділена фірмовим зеленим кольором. */
 .section-title .accent{ color: var(--green); }
-
-/* ---------- Сторінка "04" — імітаційна модель СЕС (PvSyst) ----------
-   Двоколонковий макет: зліва — вертикальний таймлайн з 6 пунктами
-   врахованих факторів моделювання (з'єднані лінією, з маркером-кружком
-   біля кожного — за мотивами скріншоту референсу), справа — скріншот
-   (обрізаний фрагмент, див. KP_CONFIG.PVSYST_CROP) 5-ї сторінки
-   завантаженого звіту PvSyst.pdf (запит Анни, 2026-07-13). Сторінка —
-   flex-колонка на всю висоту (--page-h), а .shading-layout — flex:1, щоб
-   рядок з текстом і картинкою центрувався по вертикалі в залишку висоти
-   під заголовком, а не тулився зверху з порожнечею знизу (запит Анни,
-   2026-07-13: "текст лівої сторони підняти вище, по центру листа").
-   Оновлено 2026-07-13 (ще один запит того ж дня, "лучше разместить все
-   на листе, картинку пропорционально увеличить"): колонка картинки
-   розширена (1fr 1.35fr → 1fr 1.5fr), а сама .shading-img тепер займає
-   всю висоту рядка (display:flex + height:100%), а img масштабується
-   через object-fit:contain на всю доступну висоту, а не лише на ширину
-   колонки — картинка виходить помітно більшою.
-   Оновлено ЩЕ РАЗ того ж дня (запит Анни, "картинку розташувати нижче і
-   збільшити"): колонка під картинку розширена ще сильніше (1fr 1.5fr →
-   1fr 1.7fr), а вирівнювання картинки всередині .shading-img змінено з
-   center на flex-end — картинка (яка через object-fit:contain зазвичай
-   ширша за високою, тому не займає всю висоту блоку) тепер притиснута до
-   низу свого блоку замість висіти по центру з порожнечею і зверху, і
-   знизу. */
 .shading-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
-/* ВИПРАВЛЕНО (2026-07-14, запит Анни: "картинку опустити - в
-   горизонтальній площині вона має бути по центру"): align-items:center
-   на grid-рівні тримав весь рядок (текст+картинка) по вертикальному
-   центру доступної висоти сторінки — картинка через це виглядала
-   зависокою на сторінці. align-items:end опускає весь рядок до низу
-   доступного простору, роблячи картинку помітно нижчою; горизонтальне
-   центрування самої картинки в її колонці вже забезпечує
-   justify-content:center на .shading-img нижче — не займано. */
 .shading-layout{
   display:grid;
   grid-template-columns: 1fr 1.7fr;
   gap: 40px;
-  align-items:end;
+  align-items:stretch;
   flex: 1;
   min-height: 0;
   margin-top: 18px;
@@ -345,6 +245,7 @@ body{
 .shading-timeline{
   position:relative;
   padding-left: 24px;
+  align-self: start;
 }
 .shading-timeline::before{
   content:"";
@@ -378,9 +279,7 @@ body{
   background:#fff;
 }
 .shading-img img{ width:auto; height:100%; max-width:100%; object-fit:contain; display:block; }
-
 .kp-body p{ font-size:15px; line-height:1.65; color:#2b2f2e; }
-
 .gallery{
   display:grid;
   grid-template-columns: repeat(2,1fr);
@@ -390,7 +289,6 @@ body{
 .gallery figure{ margin:0; }
 .gallery img{ width:100%; border-radius:8px; border:1px solid var(--line); display:block; }
 .gallery figcaption{ font-size:12px; color:var(--text-muted); margin-top:4px; }
-
 .split-list{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -403,7 +301,6 @@ body{
   position:absolute; left:0; top:5px;
 }
 .spec-item b{ display:block; color:var(--ink); }
-
 table.kp-table{
   width:100%;
   border-collapse:collapse;
@@ -432,49 +329,6 @@ table.kp-table tr.grand td{
   font-weight:800;
   border-top:2px solid var(--ink);
 }
-
-/* ---------- Сторінка "Бюджет реалізації" (запит Анни, 2026-07-13) ----------
-   Таблиця 1:1 з референсного слайду: три групи (Обладнання / Витратні
-   матеріали / Роботи), кожна з мержованою колонкою назви групи (вертикальний
-   напис) і мержованою колонкою підсумкової суми.
-   Компактніші відступи/шрифт (2026-07-13, фікс переповнення при друку):
-   при повному наборі рядків (динамічна кількість позицій "Обладнання" +
-   по 5 фіксованих "Витратні матеріали"/"Роботи" = легко 17-23 рядки)
-   таблиця раніше за висотою НЕ влазила в одну фізичну сторінку A4 при
-   друці і "перетікала" на сирітську сторінку без заголовка (той самий
-   баг, що й на сторінці-обкладинці, див. .cover-page вище) — зменшено
-   вертикальні padding і трохи шрифт, щоб типовий набір рядків влазив
-   в одну сторінку. ПОПЕРЕДЖЕННЯ: для файлів із дуже довгим списком
-   обладнання (більше ~9-10 позицій) таблиця все одно може перетекти на
-   другу сторінку — це не обрізає/не губить дані (на відміну від
-   overflow:hidden-підходу), просто виглядає як зайва сторінка без
-   логотипа; якщо це трапляється часто, варто обговорити з Анною окремий
-   дизайн "продовження" з повторним заголовком.
-   ПОВЕРНУТО НАЗАД (2026-07-13, того ж дня): спершу кольорові фони груп
-   (grp-equip/grp-mat/grp-works) і кольорові мержовані комірки
-   (.budget-cat/.budget-price) були прибрані на користь товщих нижніх
-   границь (.group-last) — але Анна сказала, що це "все зіпсувало" й
-   попросила повернути попередній кольоровий вигляд таблиці як було, і
-   натомість вирішити проблему зайвого рядка через обмеження діапазону
-   вибору обладнання (див. findBudgetEquipItems() у kp-render.js,
-   .slice(0,8) — B3:B10). Кольори тут відновлені 1:1 як до цієї сесії
-   правок. .budget-page/.budget-layout (align-items:center) — вертикальне
-   центрування бічної колонки приміток відносно всієї сторінки — НЕ
-   відкочено, Анна цю частину не просила міняти. */
-/* ВИПРАВЛЕНО (2026-07-14, запит Анни: "таблицю підняти вверх, вона
-   пішла за край листа, зробити невеликі поля під таблицею"): раніше
-   .budget-layout мав align-items:center на grid-рівні — коли реальний
-   контент таблиці (до 8 позицій обладнання + 5 витратних матеріалів +
-   5 робіт = 18 рядків) не влазив у доступну висоту сторінки, це
-   призводило до того, що таблиця "звисала" за нижній край --page-h і
-   обрізалась через overflow:hidden на .budget-page, а не акуратно
-   починалась зверху. Два фікси разом: (1) align-items:center →
-   align-items:start, щоб таблиця завжди починалась від верху блоку,
-   а не намагалась центруватись; (2) суттєво стиснуто padding/font-size
-   таблиці (рядок body ~31px → ~23px), щоб повний набір з 18 рядків +
-   шапка + 3 підсумкові рядки реально влазив у ~580px доступної висоти
-   з запасом ~70px знизу — саме ці "невеликі поля під таблицею", про які
-   просила Анна. */
 .budget-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .budget-layout{
   display:grid;
@@ -485,13 +339,6 @@ table.kp-table tr.grand td{
   min-height: 0;
   margin-top: 4px;
 }
-/* Таблиця збільшена в усіх напрямках і текст відцентровано по горизонталі
-   (запит Анни, 2026-07-14): ширша колонка в .budget-layout вище (2.3fr ->
-   2.6fr), більший шрифт і padding (не менше, ніж було — навпаки, збільшено),
-   рядки трохи вищі (вертикальне "розтягування"), а звичайні комірки (назва/
-   кількість) тепер по центру замість вирівнювання по лівому краю; колонка
-   сум лишається по центру теж (раніше — праворуч), щоб уся таблиця виглядала
-   рівномірно центрованою. */
 table.budget-table{
   width:100%;
   border-collapse:collapse;
@@ -501,7 +348,7 @@ table.budget-table th{
   background: var(--green-dark);
   color:#fff;
   text-align:center;
-  padding:8px 14px;
+  padding:5px 14px;
   font-size:12.5px;
   font-weight:700;
   line-height:1.3;
@@ -509,7 +356,7 @@ table.budget-table th{
 table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:center; }
 table.budget-table td{
-  padding:8px 14px;
+  padding:4px 14px;
   border-bottom: 1px solid rgba(255,255,255,.16);
   color:#fff;
   vertical-align:middle;
@@ -526,7 +373,7 @@ table.budget-table .budget-cat{
   letter-spacing:.03em;
   background: var(--green-dark);
   border-bottom: none;
-  padding: 10px 10px;
+  padding: 5px 10px;
 }
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
@@ -542,16 +389,9 @@ table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700;
 table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; }
 table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
-/* Ручна правка значень (запит Анни, 2026-07-14) — той самий патерн, що
-   й у .warranty-table нижче: дані підтягуються автоматично, але кожне
-   значення (назва/кількість/сума, підсумкові рядки) можна виправити
-   вручну прямо в готовому КП. Підсвітка світліша за темний фон таблиці
-   (rgba білого), а не var(--tint), інакше білий текст на світлому тлі
-   був би нечитабельним. */
 table.budget-table td[contenteditable]{ cursor:text; }
 table.budget-table td[contenteditable]:hover{ background: rgba(255,255,255,.16); }
 table.budget-table td[contenteditable]:focus{ outline:2px solid #fff; outline-offset:-2px; background: rgba(255,255,255,.24); }
-
 .budget-notes{ display:flex; flex-direction:column; gap:16px; }
 .budget-notes .note{ display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.55; color:#2b2f2e; }
 .budget-notes .note b{ color:var(--ink); }
@@ -561,7 +401,6 @@ table.budget-table td[contenteditable]:focus{ outline:2px solid #fff; outline-of
   display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800;
   margin-top:1px;
 }
-
 .cost-box{
   border:1px solid var(--line);
   border-radius: var(--radius);
@@ -574,7 +413,6 @@ table.budget-table td[contenteditable]:focus{ outline:2px solid #fff; outline-of
 .pay-card{ border:1px solid var(--line); border-radius:8px; padding:12px 14px;}
 .pay-card .amt{ font-size:19px; font-weight:800; color:var(--ink); }
 .pay-card .lbl{ font-size:11.5px; color:var(--text-muted); text-transform:uppercase; }
-
 .benefit-strip{
   display:grid; grid-template-columns: 1.2fr 1fr; gap:12px; margin-top:16px;
 }
@@ -584,17 +422,8 @@ table.budget-table td[contenteditable]:focus{ outline:2px solid #fff; outline-of
 .benefit-box .big{ font-size:30px; font-weight:800; }
 .benefit-box .cap{ font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; opacity:.85; margin-bottom:4px; }
 .benefit-box .sub{ font-size:12px; opacity:.85; margin-top:6px; }
-
 .chart-wrap{ margin-top:46px; border:1px solid var(--line); border-radius:var(--radius); padding:22px 16px 16px; }
 .chart-wrap canvas{ max-height:340px; }
-
-/* ---------- Сторінка "05" — порівняння погодинної генерації ----------
-   Лінійний графік Chart.js з 4 місяцями-прикладами (січень/квітень/
-   липень/жовтень), джерело — окремий файл із сезонними погодинними
-   графіками (js/seasonal.js). Сторінка — flex-колонка на всю висоту
-   (--page-h, той самий патерн, що й .why-page/.shading-page), а
-   .seasonal-chart-wrap — flex:1, щоб графік займав увесь залишок висоти
-   під заголовком, а не тулився зверху з порожнечею знизу. */
 .seasonal-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .seasonal-chart-wrap{
   flex: 1;
@@ -606,22 +435,7 @@ table.budget-table td[contenteditable]:focus{ outline:2px solid #fff; outline-of
   position: relative;
 }
 .seasonal-chart-wrap canvas{ width:100% !important; height:100% !important; }
-
-/* ---------- Сторінка "Гарантійний термін та термін використання" ----------
-   Замінює стару "06 Вартість проєкту" (видалено разом із "07"/"08" —
-   запит Анни, 2026-07-13). НЕМАЄ стандартного .kp-header/.section-title —
-   лише невеликий логотип і зелений банер (той самий патерн, що й
-   .why-banner), точно як на скріншоті референсу. Банер і таблиця
-   навмисно "бліджать" до країв сторінки (той самий трюк з від'ємними
-   марджинами calc(-1*var(--page-pad)), що й у .why-banner), а не
-   обмежені стандартним --page-pad, як решта контентних сторінок. */
 .warranty-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
-/* align-self:flex-start потрібен обов'язково: .warranty-page — flex-колонка
-   (display:flex; flex-direction:column), і БЕЗ цього логотип як прямий
-   flex-item розтягується на всю ширину контейнера (align-items:stretch за
-   замовчуванням для flex-колонки — це крос-вісь = горизонталь), псуючи
-   пропорції картинки (виявлено при живій перевірці 2026-07-13: логотип
-   виходив на всю ширину сторінки замість маленького в кутку). */
 .warranty-page .logo{ height:28px; display:block; margin-bottom:24px; align-self:flex-start; }
 .warranty-banner{
   background: var(--green); color:#fff;
@@ -657,46 +471,11 @@ table.warranty-table td.wu, table.warranty-table td.wu-life{
   border-left: 1px solid var(--line);
 }
 table.warranty-table td.wu-life{ font-weight:800; color:var(--ink); font-size:16px; }
-/* Гарантійні терміни (запит Анни, 2026-07-13: "зробити можливим вписувати
-   в кожній строке гарантійні терміни руками") — комірки "Гарантія"/
-   "Термін використання*" тепер contenteditable (kp-render.js). Легкий
-   візуальний натяк, що поле редаговане — курсор-текст, підсвітка на
-   ховер і рамка у фокусі; на друк/у PDF (html2canvas знімає живий DOM у
-   момент кліку по кнопці) впливає лише як звичайний текст, ці стани не
-   потрапляють у знімок. */
 table.warranty-table td[contenteditable]{ cursor:text; }
 table.warranty-table td[contenteditable]:hover{ background: var(--tint); }
 table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); outline-offset:-2px; background: var(--tint-2); }
-
-/* ---------- Остання сторінка — контакти менеджера ----------
-   Персональна "візитка" менеджера, який веде цей об'єкт (запит Анни,
-   2026-07-13). Так само немає .kp-header/.section-title — лише логотип
-   зверху, точно як на скріншоті. Фото — фіксоване співвідношення сторін
-   3:4 (object-fit:cover, щоб не спотворювалось незалежно від пропорцій
-   оригіналу), ім'я/посада — під фото зліва (не поверх фото).
-   Оновлено 2026-07-13 (запит Анни, "гармонійно розподілити по листу"):
-   сторінка раніше була простим .kp-page — логотип + картка сиділи
-   зверху, лишаючи багато порожнечі знизу. Тепер .manager-page —
-   фіксовано-висотний flex-стовпець (той самий патерн, що й
-   .warranty-page/.why-page/...), а .manager-body — flex:1 з
-   align-items:center, тому фото+контакти вертикально центруються в усій
-   висоті сторінки, а не тиснуться зверху. align-self:flex-start на
-   логотипі — та сама причина, що й на .warranty-page .logo вище (без
-   цього логотип розтягнеться на всю ширину як прямий child flex-колонки).
-   Оновлено ЩЕ РАЗ того ж дня (запит Анни, "все увеличить и расположить
-   ближе к центру" — перше центрування її не задовольнило): фото/ім'я/
-   посада/контакти збільшені ще сильніше (фото-колонка 300px→380px,
-   практично всі шрифти +2-3px), і .manager-body тепер додатково
-   обмежений max-width:980px + margin:0 auto — блок центрується не лише
-   по вертикалі (як було), а й по горизонталі, замість розтягування на
-   всю ширину сторінки — це має читатись як по-справжньому "по центру
-   листа", а не просто "вертикально вирівняно по краях". */
 .manager-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .manager-page .logo{ height:26px; display:block; margin-bottom:40px; align-self:flex-start; }
-/* ВИПРАВЛЕНО (2026-07-14, запит Анни: "текст справа від фото зсунути
-   правіше"): збільшено gap між фото та блоком контактів 64px → 110px —
-   зсуває текстовий блок помітно правіше відносно фотографії, без зміни
-   вертикального/горизонтального центрування всього .manager-body. */
 .manager-body{ display:flex; gap:110px; align-items:center; flex:1; min-height:0; max-width:980px; margin:0 auto; width:100%; }
 .manager-photo-col{ flex: 0 0 380px; }
 .manager-photo{
@@ -714,11 +493,9 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
 .manager-contacts .mc-title{ font-size:19px; font-weight:800; color:var(--green-dark); margin-bottom:7px; }
 .manager-contacts .mc-val{ font-size:19px; color:var(--ink); line-height:1.5; }
 .manager-contacts .mc-val a{ color:var(--ink); text-decoration: underline; }
-
 .terms-list{ margin-top:8px; }
 .terms-list .t-row{ display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:14px;}
 .terms-list .t-row b{ min-width:150px; color:var(--ink); }
-
 .kp-footer{
   position:absolute; left:var(--page-pad); right:var(--page-pad); bottom: var(--page-pad);
   display:flex; justify-content:space-between; align-items:flex-end;
@@ -733,12 +510,6 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
 .footer-dark .fsub{ font-size:12.5px; opacity:.8; margin-top:2px; }
 .footer-dark .fcontact{ text-align:right; font-size:13px; line-height:1.6; }
 .disclaimer{ font-size:11.5px; color:var(--text-muted); margin-top:14px; line-height:1.55; }
-
-/* ---------- Сторінка 1 — титульний слайд (фото + напис) ----------
-   Взято з референсної презентації (запит Анни, 2026-07-07): фото сонячної
-   станції на заході на весь розворот, білий логотип, і великий напис, що
-   автоматично складається з типу станції (мережева/гібридна) та
-   потужності — фон завжди референсне фото заходу (не фото об'єкта). */
 .hero-page{ padding:0; overflow:hidden; }
 .hero-bg{
   position:absolute; inset:0;
@@ -754,16 +525,6 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
   color:#fff; font-size:40px; font-weight:800; line-height:1.2;
   max-width:60%; text-shadow: 0 2px 10px rgba(0,0,0,.25);
 }
-
-/* ---------- Сторінка 2 — "Чому саме ESCORE?" ----------
-   Контент 1:1 з референсної презентації (сертифікат + асоціації), але
-   перекладений з альбомної презентаційної розкладки під наш --- тепер теж
-   альбомний, але вужчий за пропорціями --- формат сторінки: банер зверху
-   на всю ширину, сертифікат зліва, пункти й сітка логотипів справа. */
-/* Плашка з написом — фірмовий зелений (не темний ink), запит Анни
-   2026-07-07. Сторінка тепер фіксованої висоти (--page-h) і flex-колонка,
-   щоб блок з сертифікатом і колонка з пунктами розтягувались на всю
-   висоту сторінки, а не займали лише верхню третину. */
 .why-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .why-banner{
   background: var(--green); color:#fff;
@@ -772,9 +533,6 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
   margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 26px;
 }
 .why-body{ display:flex; gap:36px; flex:1; min-height:0; }
-/* Сертифікат збільшено та вирівняно по висоті сторінки (запит Анни,
-   2026-07-07): фіксована широка колонка, картинка масштабується на всю
-   доступну висоту зі збереженням пропорцій (object-fit:contain). */
 .why-cert{ flex: 0 0 380px; height:100%; }
 .why-cert img{ width:100%; height:100%; object-fit:contain; border-radius:10px; border:1px solid var(--line); display:block; }
 .why-content{ flex:1; display:flex; flex-direction:column; justify-content:center; min-width:0; }
@@ -784,15 +542,6 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
   background: var(--tint); color:var(--green-dark);
   display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800;
 }
-/* Сітка логотипів асоціацій — 2 колонки x 3 рядки (запит Анни,
-   2026-07-13: "два стовпчики по три плашки", було 3 колонки x 2 рядки).
-   Кожна плашка обгорнута в .logo-tile — однакова фіксована висота-рамка
-   (з рамкою й фоном) для всіх, щоб вони виглядали ОДНАКОВОГО РОЗМІРУ
-   незалежно від пропорцій вихідного файлу-логотипа (раніше кожен img
-   мав свою природну ширину/висоту всередині object-fit:contain, тому
-   різні логотипи виглядали різного "візуального" розміру). Менша
-   кількість колонок + більша висота плашки природньо заповнюють
-   сторінку краще (запит "менше білих полів"). */
 .why-logos{ display:grid; grid-template-columns: repeat(2,1fr); gap: 20px 26px; margin-top:16px; }
 .logo-tile{
   height: 128px;
@@ -803,32 +552,10 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
   padding: 12px 20px;
 }
 .logo-tile img{ max-width:100%; max-height:100%; object-fit:contain; }
-/* "СУП" (Спілка Українських Підприємців) — текстова плашка замість
-   растрового файлу (запит Анни, 2026-07-13: "плашка... синие буквы на
-   белом фоне" — оригінальний jpg мав темний навколо-чорний фон, який не
-   пасував до решти білих плашок і був погано читабельним). Колір — той
-   самий синій, що й в оригінальному лого. */
 .why-logo-sup{ flex-direction:column; color:#0026FE; text-align:center; }
 .why-logo-sup .sup-abbr{ font-size:30px; font-weight:900; line-height:1; letter-spacing:.02em; }
 .why-logo-sup .sup-full{ font-size:12.5px; font-weight:700; line-height:1.3; margin-top:6px; }
-
-/* ---------- Друк ---------- */
 @media print{
-  /* КРИТИЧНО (знайдено 2026-07-13 при аналізі реального PDF від Анни):
-     без цього правила Chrome/більшість браузерів НЕ друкують жоден
-     background-image/background-color, якщо користувач не поставив
-     галочку "Друкувати графіку тла"/"Background graphics" у діалозі
-     друку — і саме це трапилось із першим PDF: банер "Чому саме
-     ESCORE?" вийшов без зеленого фону, кружечки-чекбокси без заливки,
-     а титульна сторінка (фото заходу + білий текст/лого поверх) стала
-     ПОВНІСТЮ БІЛОЮ (білий текст і білий логотип на білому тлі — фото
-     просто не надрукувалось). Це правило змушує браузер завжди
-     друкувати фон незалежно від стану тієї галочки.
-     ПРИМІТКА (2026-07-13, пізніше того ж дня): відтоді PDF формується
-     через html2canvas + jsPDF (див. app.js, handleSavePdf()), а не
-     нативний window.print()/@media print — це правило й решта блоку
-     @media print більше не задіяні в основному сценарії, але лишені в
-     коді на випадок, якщо хтось відкриє КП через Cmd+P напряму. */
   *{
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
