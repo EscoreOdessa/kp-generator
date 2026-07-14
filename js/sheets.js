@@ -248,7 +248,20 @@
     const materialsCat = equipIdx >= 0 ? pdv.categories[equipIdx + 1] : null;
     const worksCat = equipIdx >= 0 ? pdv.categories[equipIdx + 2] : null;
 
-    const equipmentCost = sumLineNetto(equipItems);
+    // Вартість групи "Обладнання" (запит Анни, 2026-07-14, повторна сесія):
+    // рахувати як суму лише позицій із показаного діапазону (B3:B10) —
+    // НЕПРАВИЛЬНО, бо це не те саме, що повна вартість категорії "1" у
+    // файлі: категорія на вкладці ПДВ може містити більше позицій, ніж
+    // влазить у показаний діапазон таблиці, а сам файл вже має власний
+    // підсумок категорії — комірка L2 (рядок заголовка категорії "1",
+    // стовпець "Сума продажу нетто без ПДВ з націнкою"). Анна попросила
+    // явно брати це значення з L2. Фіксована адреса тут навмисна (той
+    // самий підхід, що й для панелі "Фінансові показники" у
+    // parseModelSheet) — запасний варіант (сума показаних позицій)
+    // лишається, якщо в конкретному файлі рядок 2/стовпець L порожній
+    // чи не число.
+    const equipmentCostFromFile = numeric(rows[1] && rows[1][11]);
+    const equipmentCost = equipmentCostFromFile != null ? equipmentCostFromFile : sumLineNetto(equipItems);
     const materialsCost = sumLineNetto(materialsCat && materialsCat.items);
     const worksCost = sumLineNetto(worksCat && worksCat.items);
     const groupsSum = equipmentCost + materialsCost + worksCost;
