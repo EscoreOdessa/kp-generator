@@ -348,6 +348,13 @@
     return cat ? cat.items.slice(0, 8) : [];
   }
 
+  // Комірки-значення (назва/кількість/сума групи) — contenteditable
+  // (запит Анни, 2026-07-14): дані підтягуються автоматично з файлу-
+  // розрахунку, але має бути можливість вручну виправити будь-яке
+  // значення прямо в готовому КП (той самий патерн, що й на сторінці
+  // "Гарантійний термін", див. pageWarranty() нижче). Мітка групи
+  // (budget-cat, напр. "Обладнання") лишається НЕ редагованою — це
+  // структурний заголовок, не дані з файлу.
   function budgetGroupRows(items, getName, getQty, priceVal, catLabel, groupClass) {
     if (!items.length) return "";
     return items.map((it, i) => {
@@ -356,9 +363,9 @@
       const first = i === 0;
       return `<tr class="${groupClass}">
         ${first ? `<td class="budget-cat" rowspan="${items.length}"><span>${esc(catLabel)}</span></td>` : ""}
-        <td>${esc(name)}</td>
-        <td class="num">${qty == null ? "—" : fmtNum(qty)}</td>
-        ${first ? `<td class="num budget-price" rowspan="${items.length}">${fmtUsd(priceVal)}</td>` : ""}
+        <td contenteditable="true">${esc(name)}</td>
+        <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
+        ${first ? `<td class="num budget-price" rowspan="${items.length}" contenteditable="true">${fmtUsd(priceVal)}</td>` : ""}
       </tr>`;
     }).join("");
   }
@@ -386,9 +393,9 @@
             ${budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works")}
           </tbody>
           <tfoot>
-            <tr class="sum"><td colspan="3">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
-            <tr class="sum"><td colspan="3">ПДВ</td><td class="num">${fmtUsd(b.vat)}</td></tr>
-            <tr class="sum grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num">${fmtUsd(b.grossTotal)}</td></tr>
+            <tr class="sum"><td colspan="3">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
+            <tr class="sum"><td colspan="3">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
+            <tr class="sum grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>
           </tfoot>
         </table>
         <aside class="budget-notes">
