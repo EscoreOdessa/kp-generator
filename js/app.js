@@ -71,7 +71,7 @@
           if (name) objectName = name;
         } catch (e) { /* non-fatal */ }
       }
-      if (!objectName) objectName = "Grand Marine";
+      if (!objectName) objectName = "[Назва об'єкта]";
 
       const model = {
         meta: {
