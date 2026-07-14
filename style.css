@@ -348,7 +348,7 @@ table.budget-table th{
   background: var(--green-dark);
   color:#fff;
   text-align:center;
-  padding:5px 14px;
+  padding:6px 14px;
   font-size:12.5px;
   font-weight:700;
   line-height:1.3;
@@ -356,7 +356,7 @@ table.budget-table th{
 table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:center; }
 table.budget-table td{
-  padding:4px 14px;
+  padding:5px 14px;
   border-bottom: 1px solid rgba(255,255,255,.16);
   color:#fff;
   vertical-align:middle;
@@ -386,6 +386,8 @@ table.budget-table .budget-cat{
   background: var(--green-dark);
   border-bottom: none;
   padding: 5px 4px;
+  width: 38px;
+  min-width: 38px;
 }
 table.budget-table .budget-price{
   position: relative;
@@ -416,7 +418,7 @@ table.budget-table .grp-works{ background: var(--green); }
 table.budget-table .grp-mat{ background: #4C7A72; }
 table.budget-table .grp-mat .budget-price{ background:#375D57; }
 table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13.5px; }
-table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; }
+table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; padding:6px 14px; }
 table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 table.budget-table [contenteditable]{ cursor:text; }
