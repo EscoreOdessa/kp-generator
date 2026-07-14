@@ -325,11 +325,19 @@ body{
    низу свого блоку замість висіти по центру з порожнечею і зверху, і
    знизу. */
 .shading-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
+/* ВИПРАВЛЕНО (2026-07-14, запит Анни: "картинку опустити - в
+   горизонтальній площині вона має бути по центру"): align-items:center
+   на grid-рівні тримав весь рядок (текст+картинка) по вертикальному
+   центру доступної висоти сторінки — картинка через це виглядала
+   зависокою на сторінці. align-items:end опускає весь рядок до низу
+   доступного простору, роблячи картинку помітно нижчою; горизонтальне
+   центрування самої картинки в її колонці вже забезпечує
+   justify-content:center на .shading-img нижче — не займано. */
 .shading-layout{
   display:grid;
   grid-template-columns: 1fr 1.7fr;
   gap: 40px;
-  align-items:center;
+  align-items:end;
   flex: 1;
   min-height: 0;
   margin-top: 18px;
@@ -453,12 +461,26 @@ table.kp-table tr.grand td{
    правок. .budget-page/.budget-layout (align-items:center) — вертикальне
    центрування бічної колонки приміток відносно всієї сторінки — НЕ
    відкочено, Анна цю частину не просила міняти. */
+/* ВИПРАВЛЕНО (2026-07-14, запит Анни: "таблицю підняти вверх, вона
+   пішла за край листа, зробити невеликі поля під таблицею"): раніше
+   .budget-layout мав align-items:center на grid-рівні — коли реальний
+   контент таблиці (до 8 позицій обладнання + 5 витратних матеріалів +
+   5 робіт = 18 рядків) не влазив у доступну висоту сторінки, це
+   призводило до того, що таблиця "звисала" за нижній край --page-h і
+   обрізалась через overflow:hidden на .budget-page, а не акуратно
+   починалась зверху. Два фікси разом: (1) align-items:center →
+   align-items:start, щоб таблиця завжди починалась від верху блоку,
+   а не намагалась центруватись; (2) суттєво стиснуто padding/font-size
+   таблиці (рядок body ~31px → ~23px), щоб повний набір з 18 рядків +
+   шапка + 3 підсумкові рядки реально влазив у ~580px доступної висоти
+   з запасом ~70px знизу — саме ці "невеликі поля під таблицею", про які
+   просила Анна. */
 .budget-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .budget-layout{
   display:grid;
   grid-template-columns: 2.3fr 1fr;
   gap: 28px;
-  align-items:center;
+  align-items:start;
   flex: 1;
   min-height: 0;
   margin-top: 4px;
@@ -466,21 +488,21 @@ table.kp-table tr.grand td{
 table.budget-table{
   width:100%;
   border-collapse:collapse;
-  font-size: 13px;
+  font-size: 11.5px;
 }
 table.budget-table th{
   background: var(--green-dark);
   color:#fff;
   text-align:left;
-  padding:9px 14px;
-  font-size:12.5px;
+  padding:5px 12px;
+  font-size:11px;
   font-weight:700;
   line-height:1.3;
 }
 table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:right; }
 table.budget-table td{
-  padding:7px 14px;
+  padding:4px 12px;
   border-bottom: 1px solid rgba(255,255,255,.16);
   color:#fff;
   vertical-align:middle;
@@ -492,11 +514,11 @@ table.budget-table .budget-cat{
   transform: rotate(180deg);
   text-align:center;
   font-weight:800;
-  font-size:13px;
+  font-size:12px;
   letter-spacing:.03em;
   background: var(--green-dark);
   border-bottom: none;
-  padding: 10px 10px;
+  padding: 8px 8px;
 }
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
@@ -504,14 +526,23 @@ table.budget-table .grp-mat{ background: #4C7A72; }
 table.budget-table .budget-price{
   background: var(--green-dark);
   font-weight:800;
-  font-size:16px;
+  font-size:14px;
   text-align:center;
 }
 table.budget-table .grp-mat .budget-price{ background:#375D57; }
-table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13px; }
+table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:12px; }
 table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); }
-table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
+table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:13.5px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
+/* Ручна правка значень (запит Анни, 2026-07-14) — той самий патерн, що
+   й у .warranty-table нижче: дані підтягуються автоматично, але кожне
+   значення (назва/кількість/сума, підсумкові рядки) можна виправити
+   вручну прямо в готовому КП. Підсвітка світліша за темний фон таблиці
+   (rgba білого), а не var(--tint), інакше білий текст на світлому тлі
+   був би нечитабельним. */
+table.budget-table td[contenteditable]{ cursor:text; }
+table.budget-table td[contenteditable]:hover{ background: rgba(255,255,255,.16); }
+table.budget-table td[contenteditable]:focus{ outline:2px solid #fff; outline-offset:-2px; background: rgba(255,255,255,.24); }
 
 .budget-notes{ display:flex; flex-direction:column; gap:16px; }
 .budget-notes .note{ display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.55; color:#2b2f2e; }
@@ -654,7 +685,11 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
    листа", а не просто "вертикально вирівняно по краях". */
 .manager-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .manager-page .logo{ height:26px; display:block; margin-bottom:40px; align-self:flex-start; }
-.manager-body{ display:flex; gap:64px; align-items:center; flex:1; min-height:0; max-width:980px; margin:0 auto; width:100%; }
+/* ВИПРАВЛЕНО (2026-07-14, запит Анни: "текст справа від фото зсунути
+   правіше"): збільшено gap між фото та блоком контактів 64px → 110px —
+   зсуває текстовий блок помітно правіше відносно фотографії, без зміни
+   вертикального/горизонтального центрування всього .manager-body. */
+.manager-body{ display:flex; gap:110px; align-items:center; flex:1; min-height:0; max-width:980px; margin:0 auto; width:100%; }
 .manager-photo-col{ flex: 0 0 380px; }
 .manager-photo{
   width:100%;
