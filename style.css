@@ -1,5 +1,5 @@
 /* style.css — брендовані стилі ESCORE для генератора КП.
-   Кольори приблизно зняті піпеткою з референсного КП (Grand Marine). */
+   Кольори приблизно зняті піпеткою з референсного КП. */
 
 :root{
   --green: #05554B;    /* фірмовий зелений, знятий піпеткою з кола в логотипі ESCORE */
@@ -478,47 +478,55 @@ table.kp-table tr.grand td{
 .budget-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .budget-layout{
   display:grid;
-  grid-template-columns: 2.3fr 1fr;
+  grid-template-columns: 2.6fr 1fr;
   gap: 28px;
   align-items:start;
   flex: 1;
   min-height: 0;
   margin-top: 4px;
 }
+/* Таблиця збільшена в усіх напрямках і текст відцентровано по горизонталі
+   (запит Анни, 2026-07-14): ширша колонка в .budget-layout вище (2.3fr ->
+   2.6fr), більший шрифт і padding (не менше, ніж було — навпаки, збільшено),
+   рядки трохи вищі (вертикальне "розтягування"), а звичайні комірки (назва/
+   кількість) тепер по центру замість вирівнювання по лівому краю; колонка
+   сум лишається по центру теж (раніше — праворуч), щоб уся таблиця виглядала
+   рівномірно центрованою. */
 table.budget-table{
   width:100%;
   border-collapse:collapse;
-  font-size: 11.5px;
+  font-size: 13px;
 }
 table.budget-table th{
   background: var(--green-dark);
   color:#fff;
-  text-align:left;
-  padding:5px 12px;
-  font-size:11px;
+  text-align:center;
+  padding:8px 14px;
+  font-size:12.5px;
   font-weight:700;
   line-height:1.3;
 }
 table.budget-table th:first-child{ text-align:center; }
-table.budget-table th.num{ text-align:right; }
+table.budget-table th.num{ text-align:center; }
 table.budget-table td{
-  padding:4px 12px;
+  padding:8px 14px;
   border-bottom: 1px solid rgba(255,255,255,.16);
   color:#fff;
   vertical-align:middle;
+  text-align:center;
 }
-table.budget-table td.num{ text-align:right; }
+table.budget-table td.num{ text-align:center; }
 table.budget-table tbody tr:last-child td{ border-bottom:none; }
 table.budget-table .budget-cat{
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   text-align:center;
   font-weight:800;
-  font-size:12px;
+  font-size:13px;
   letter-spacing:.03em;
   background: var(--green-dark);
   border-bottom: none;
-  padding: 8px 8px;
+  padding: 10px 10px;
 }
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
@@ -526,13 +534,13 @@ table.budget-table .grp-mat{ background: #4C7A72; }
 table.budget-table .budget-price{
   background: var(--green-dark);
   font-weight:800;
-  font-size:14px;
+  font-size:15.5px;
   text-align:center;
 }
 table.budget-table .grp-mat .budget-price{ background:#375D57; }
-table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:12px; }
-table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); }
-table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:13.5px; font-weight:800; }
+table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13.5px; }
+table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; }
+table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 /* Ручна правка значень (запит Анни, 2026-07-14) — той самий патерн, що
    й у .warranty-table нижче: дані підтягуються автоматично, але кожне
