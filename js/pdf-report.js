@@ -16,7 +16,30 @@
   // (частки 0..1 від розмірів відрендереної сторінки). Спільна логіка
   // для renderPdfPageToDataUrl() і renderPvsystShadingPage() нижче, щоб
   // не парсити той самий PDF двічі.
-  async function renderPageFromDoc(pdf, pageNum, crop) {
+  //
+  // timeoutMs (опційно): РЕАЛЬНИЙ ІНЦИДЕНТ (2026-07-15) — після виправлення
+  // автопошуку сторінки (renderPvsystShadingPage тепер коректно знаходить
+  // сторінку 7 у файлі "314 FC Chornomorec"), генерація КП почала повністю
+  // "зависати" на кнопці "Сформувати КП" без жодної помилки в консолі.
+  // Причина виявилась НЕ в пошуку сторінки (він відпрацьовує за мілісекунди),
+  // а в САМОМУ рендерингу цієї конкретної сторінки: вона містить складну
+  // 3D-векторну діаграму (сама "Perspective view"), і pdf.js's page.render()
+  // на ній зависає на десятки секунд і довше (перевірено напряму: не
+  // завершився навіть за 20+ секунд, і на scale:2, і на scale:1 — розмір
+  // полотна не є причиною, справа в кількості векторних операцій малювання
+  // на цій сторінці). Це відома категорія проблем продуктивності pdf.js на
+  // "важкому" векторному контенті, а не баг у коді цього проєкту. Щоб один
+  // такий "важкий" файл більше ніколи не підвішував всю генерацію КП,
+  // рендеринг PvSyst-сторінки (виклик з renderPvsystShadingPage нижче)
+  // тепер обмежений таймаутом: якщо page.render() не встигає за
+  // timeoutMs, рендер-таск скасовується (renderTask.cancel()) і функція
+  // кидає помилку — яку app.js вже ловить у try/catch навколо всього
+  // PvSyst-блоку (fail-soft: сторінка "04" просто не додається до КП,
+  // решта документа формується як завжди, замість того щоб зависнути
+  // назавжди). renderPdfPageToDataUrl() (старий публічний API, викликається
+  // без таймауту деінде) поведінку не змінює — timeoutMs завжди undefined
+  // там, де його явно не передали.
+  async function renderPageFromDoc(pdf, pageNum, crop, timeoutMs) {
     const n = Math.min(Math.max(pageNum || 1, 1), pdf.numPages);
     const page = await pdf.getPage(n);
     const viewport = page.getViewport({ scale: 2 });
@@ -24,7 +47,29 @@
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     const ctx = canvas.getContext("2d");
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    const renderTask = page.render({ canvasContext: ctx, viewport });
+    // Скасований renderTask.promise все одно колись відхилиться сам по собі
+    // (RenderingCancelledException) — без цього .catch(()=>{}) це виглядало
+    // б як "Uncaught (in promise)" у консолі вже ПІСЛЯ того, як ми самі
+    // кинули зрозумілу помилку про таймаут нижче. Приглушуємо саме цю,
+    // окрему від основного потоку помилок, "хвостову" відмову.
+    renderTask.promise.catch(() => {});
+    if (timeoutMs) {
+      let timer;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          try { renderTask.cancel(); } catch (e) { /* вже завершився/скасований — ігноруємо */ }
+          reject(new Error(`Рендеринг сторінки ${n} перевищив ліміт часу (${timeoutMs} мс) — ймовірно, складна векторна графіка на цій сторінці`));
+        }, timeoutMs);
+      });
+      try {
+        await Promise.race([renderTask.promise, timeout]);
+      } finally {
+        clearTimeout(timer);
+      }
+    } else {
+      await renderTask.promise;
+    }
     if (!crop) return canvas.toDataURL("image/png");
 
     const sx = Math.round((crop.left || 0) * canvas.width);
@@ -99,12 +144,25 @@
     /perspective\s*view/i, // м'який резерв на випадок іншої версії/локалізації PVsyst з іншим текстом підпису
   ];
 
+  // Ліміт часу на рендеринг ОДНІЄЇ сторінки PvSyst у картинку. Див. великий
+  // коментар над renderPageFromDoc() — деякі сторінки (та сама 3D-діаграма
+  // затінення) мають настільки важку векторну графіку, що pdf.js може
+  // рендерити її десятки секунд і довше. 15с — досить, щоб не відсікати
+  // звичайні "важкуваті" сторінки завчасно, і досить коротко, щоб кнопка
+  // "Сформувати КП" не виглядала "завислою" для Анни, якщо трапиться ще
+  // один такий файл.
+  const PVSYST_RENDER_TIMEOUT_MS = 15000;
+
   // Повертає {dataUrl, pageNum, autoDetected}. Якщо жоден патерн не
   // знайдено на жодній сторінці — використовує fallbackPage (типово
   // KP_CONFIG.PVSYST_PAGE) і autoDetected:false, щоб виклик міг про це
   // попередити (fail-soft: сторінка все одно рендериться, просто,
   // можливо, не та — це видно і виправляється вручну, а не мовчки ламає
-  // всю генерацію КП).
+  // всю генерацію КП). Якщо сам рендеринг обраної сторінки перевищить
+  // PVSYST_RENDER_TIMEOUT_MS — функція кидає помилку (замість того щоб
+  // зависнути назавжди); викликати код (app.js) вже обгортає весь виклик у
+  // try/catch і трактує це як "не критично" — сторінка "04" просто не
+  // додається до КП.
   async function renderPvsystShadingPage(source, crop, fallbackPage) {
     const buf = source instanceof ArrayBuffer ? source : await source.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
@@ -129,7 +187,7 @@
     }
 
     const pageNum = foundPage || Math.min(Math.max(fallbackPage || 1, 1), pdf.numPages);
-    const dataUrl = await renderPageFromDoc(pdf, pageNum, crop);
+    const dataUrl = await renderPageFromDoc(pdf, pageNum, crop, PVSYST_RENDER_TIMEOUT_MS);
     return { dataUrl, pageNum, autoDetected: !!foundPage };
   }
 
