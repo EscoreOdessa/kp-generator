@@ -36,13 +36,28 @@
       // Якщо поле порожнє або файл не вдалось завантажити/відрендерити,
       // сторінка просто не додається до документа (не критична помилка,
       // решта КП формується як завжди).
+      //
+      // Сторінка з діаграмою "Near shading: perspective view" шукається
+      // АВТОМАТИЧНО за текстовим шаром PDF (renderPvsystShadingPage,
+      // js/pdf-report.js) — номер цієї сторінки різний у різних файлах
+      // PVsyst, тому більше не покладаємось лише на фіксований
+      // KP_CONFIG.PVSYST_PAGE. Той конфіг лишається як РЕЗЕРВНИЙ номер на
+      // випадок, якщо автопошук нічого не знайде (нетиповий звіт/інша
+      // мова експорту) — про це попереджаємо в консоль, щоб було видно,
+      // що варто перевірити сторінку вручну.
       let pvsystImage = null;
       const pvsystUrl = document.getElementById("in-pvsyst-url").value.trim();
       if (pvsystUrl) {
         try {
           setStatus("Завантажуємо звіт PVsyst.pdf з Google Drive...");
           const buf = await KpDrive.fetchDriveFileArrayBuffer(pvsystUrl);
-          pvsystImage = await KpPdfReport.renderPdfPageToDataUrl(buf, KP_CONFIG.PVSYST_PAGE || 5, KP_CONFIG.PVSYST_CROP);
+          const shading = await KpPdfReport.renderPvsystShadingPage(buf, KP_CONFIG.PVSYST_CROP, KP_CONFIG.PVSYST_PAGE || 5);
+          pvsystImage = shading.dataUrl;
+          if (shading.autoDetected) {
+            console.info(`PVsyst.pdf: сторінку з діаграмою затінення знайдено автоматично (стор. ${shading.pageNum}).`);
+          } else {
+            console.warn(`PVsyst.pdf: не вдалось автоматично знайти сторінку з діаграмою затінення — використано резервну сторінку ${shading.pageNum} з config.js (KP_CONFIG.PVSYST_PAGE). Перевір сторінку "04" вручну.`);
+          }
         } catch (e) {
           console.warn("PVsyst.pdf: не вдалось завантажити/відрендерити (не критично):", e);
         }
