@@ -349,22 +349,56 @@
   function budgetDetailNames(n) { return n; }
   function budgetDetailQty() { return null; }
 
-  function budgetMaterialsHtml(m) {
+  function budgetDetailSubsections(m) {
     const detail = m.budgetDetail;
-    if (!detail) {
-      return budgetGroupRows(BUDGET_MATERIALS, (n) => n, () => 1, (m.budget || {}).materialsCost, "Витратні матеріали", "grp-mat");
-    }
-    const sub = [
+    if (!detail) return null;
+    return [
       { items: detail.ac && detail.ac.items, price: detail.ac && detail.ac.price, label: "Автоматика захисту змінного струму" },
       { items: detail.dc && detail.dc.items, price: detail.dc && detail.dc.price, label: "Автоматика захисту фотоелектричних модулів (постійний струм)" },
       { items: detail.cable && detail.cable.items, price: detail.cable && detail.cable.price, label: "Кабельно-провідникова продукція + конектори МС4" },
     ];
-    return sub.map((s) => {
-      const items = s.items && s.items.length ? s.items : ["—"];
-      return budgetGroupRows(items, budgetDetailNames, budgetDetailQty, s.price, s.label, "grp-mat");
-    }).join("");
   }
 
+  function budgetTable(bodyHtml, priceHeader, tfootHtml) {
+    return `<table class="budget-table">
+      <thead>
+        <tr>
+          <th colspan="2">Найменування</th>
+          <th class="num">Кількість</th>
+          <th class="num">${priceHeader}</th>
+        </tr>
+      </thead>
+      <tbody>${bodyHtml}</tbody>
+      ${tfootHtml ? `<tfoot>${tfootHtml}</tfoot>` : ""}
+    </table>`;
+  }
+
+  function budgetNotesAside() {
+    return `<aside class="budget-notes">
+      <div class="note"><span class="chk">✓</span><div><b>Остаточна вартість</b> проєкту затверджується після узгодження технічних рішень</div></div>
+      <div class="note"><span class="chk">✓</span><div><b>Оплата</b> здійснюється в національній валюті за комерційним курсом на дату виконання платежу</div></div>
+      <div class="note"><span class="chk">✓</span><div>Пропозиція дійсна протягом <b>3 днів</b></div></div>
+    </aside>`;
+  }
+
+  // "Розширений бюджет" — розбиття на 2 сторінки (запит Анни, 2026-07-18,
+  // ПІСЛЯ живої перевірки): при реальній кількості позицій у "Кабельно-
+  // провідникова продукція" (у тестовому файлі — 18) три деталізовані
+  // підрозділи разом з "Обладнання"/"Роботи"/підсумками НЕ вміщались в
+  // одну сторінку з фіксованою висотою (.budget-page{overflow:hidden}) —
+  // "Роботи" й підсумкові суми просто зникали (обрізались), хоча в даних
+  // вони були. Анна обрала явний варіант "розбити на 2 сторінки" замість
+  // стиснення шрифту (шрифт і так вже стиснутий до межі читабельності) чи
+  // обрізання списку (вона explicitly НЕ хоче ховати реальні позиції
+  // клієнта). Сторінка "03" (з бейджем) — Обладнання + короткі підрозділи
+  // AC/DC (завжди короткі, по 3-5 позицій — з практики розрахунків СЕС).
+  // Друга сторінка (без бейджа, повторний хедер) — Кабельно-провідникова
+  // продукція (найбільш "довгий" підрозділ) + Роботи + підсумкові суми +
+  // примітки. Загальна нумерація наступних сторінок (04 PvSyst, 05
+  // сезонні графіки) НЕ зсувається — друга сторінка бюджету навмисно без
+  // власного номера, як і сторінки "Гарантія"/"Менеджер" наприкінці
+  // документа. У звичайному режимі (чекбокс вимкнено, m.budgetDetail
+  // null) поведінка 1:1 стара — одна сторінка "03", без змін.
   function pageBudget(m) {
     const equip = findBudgetEquipItems(m.pdv);
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
@@ -378,35 +412,53 @@
       : `<tr class="sum"><td colspan="3">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
             <tr class="sum"><td colspan="3">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
             <tr class="sum grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
-    return `
+
+    const sub = budgetDetailSubsections(m);
+    const equipHtml = budgetGroupRows(equipRows, (it) => it.name, (it) => it.qty, b.equipmentCost, "Обладнання", "grp-equip");
+    const worksHtml = budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works");
+
+    if (!sub) {
+      // Стара однасторінкова версія (чекбокс вимкнено) — без змін.
+      const materialsHtml = budgetGroupRows(BUDGET_MATERIALS, (n) => n, () => 1, b.materialsCost, "Витратні матеріали", "grp-mat");
+      return `
+      <section class="kp-page budget-page">
+        ${pageHeader(m.meta)}
+        <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
+        <div class="budget-layout">
+          ${budgetTable(equipHtml + materialsHtml + worksHtml, priceHeader, totalsHtml)}
+          ${budgetNotesAside()}
+        </div>
+      </section>`;
+    }
+
+    // Розширений бюджет — 2 сторінки. AC/DC — на першій сторінці разом з
+    // Обладнання (завжди короткі); Кабельно-провідникова продукція
+    // (найдовший підрозділ) переноситься на другу сторінку разом з
+    // Роботи й підсумками, щоб перша сторінка не переповнювалась.
+    const acHtml = budgetGroupRows(sub[0].items && sub[0].items.length ? sub[0].items : ["—"], budgetDetailNames, budgetDetailQty, sub[0].price, sub[0].label, "grp-mat");
+    const dcHtml = budgetGroupRows(sub[1].items && sub[1].items.length ? sub[1].items : ["—"], budgetDetailNames, budgetDetailQty, sub[1].price, sub[1].label, "grp-mat");
+    const cableHtml = budgetGroupRows(sub[2].items && sub[2].items.length ? sub[2].items : ["—"], budgetDetailNames, budgetDetailQty, sub[2].price, sub[2].label, "grp-mat");
+
+    const page1 = `
     <section class="kp-page budget-page">
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
-      <div class="budget-layout">
-        <table class="budget-table">
-          <thead>
-            <tr>
-              <th colspan="2">Найменування</th>
-              <th class="num">Кількість</th>
-              <th class="num">${priceHeader}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${budgetGroupRows(equipRows, (it) => it.name, (it) => it.qty, b.equipmentCost, "Обладнання", "grp-equip")}
-            ${budgetMaterialsHtml(m)}
-            ${budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works")}
-          </tbody>
-          <tfoot>
-            ${totalsHtml}
-          </tfoot>
-        </table>
-        <aside class="budget-notes">
-          <div class="note"><span class="chk">✓</span><div><b>Остаточна вартість</b> проєкту затверджується після узгодження технічних рішень</div></div>
-          <div class="note"><span class="chk">✓</span><div><b>Оплата</b> здійснюється в національній валюті за комерційним курсом на дату виконання платежу</div></div>
-          <div class="note"><span class="chk">✓</span><div>Пропозиція дійсна протягом <b>3 днів</b></div></div>
-        </aside>
+      <div class="budget-table-wrap">
+        ${budgetTable(equipHtml + acHtml + dcHtml, priceHeader, null)}
       </div>
     </section>`;
+
+    const page2 = `
+    <section class="kp-page budget-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title">Бюджет реалізації (продовження)</div>
+      <div class="budget-layout">
+        ${budgetTable(cableHtml + worksHtml, priceHeader, totalsHtml)}
+        ${budgetNotesAside()}
+      </div>
+    </section>`;
+
+    return page1 + page2;
   }
 
   // ---------- Сторінка 04 — імітаційна модель СЕС (PvSyst) ----------
