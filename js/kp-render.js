@@ -943,7 +943,7 @@
       ${docSection("Технічні характеристики", docTechTable(model), { avoidBreak: true })}
       ${docSection("Фінансові показники", docFinTable(model), { avoidBreak: true })}
       ${docSection("Бюджет реалізації", docBudgetTable(model))}
-      ${docSection("Імітаційна модель СЕС", docPvsystBlock(model))}
+      ${docSection("Імітаційна модель СЕС", docPvsystBlock(model), { avoidBreak: true })}
       ${docSection("Гарантійний термін та термін використання", warrantyTableHtml(), { avoidBreak: true })}
       ${docManagerBlock()}
     </div>`;
