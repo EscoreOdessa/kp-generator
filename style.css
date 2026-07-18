@@ -799,6 +799,16 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
     page: doc-page;
   }
   table.doc-table thead{ display: table-header-group; }
+  /* Короткі секції документа (Технічне рішення, Технічні характеристики,
+     Фінансові показники, Гарантія — запит Анни, 2026-07-19: конкретно
+     "Фінансові показники" розривалась між сторінками при друку) не мають
+     розбиватись посеред себе — заголовок секції лишався на одній сторінці,
+     а таблиця "стрибала" на наступну. Клас додається вибірково через
+     opts.avoidBreak у kp-render.js docSection() — НЕ на "Бюджет реалізації"
+     (там таблиця може бути довшою за одну сторінку, особливо з увімкненим
+     Розширеним бюджетом, тож для неї лишається точковий page-break-inside:
+     avoid на кожному <tr> вище, а не на всій секції). */
+  .doc-section-avoid-break{ page-break-inside: avoid; break-inside: avoid; }
 }
 @page{ size: A4 landscape; margin: 0; }
 @page doc-page{ size: A4 portrait; margin: 16mm 15mm; }
