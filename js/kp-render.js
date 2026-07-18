@@ -604,27 +604,35 @@
   }
 
   // ---------- Сторінка — "Гарантійний термін та термін використання" ----------
+  // Внутрішня розмітка таблиці винесена в окрему функцію (запит Анни,
+  // 2026-07-19, разом з форматом "Документ") — та сама таблиця 1:1
+  // переюзається і на слайді (pageWarranty нижче), і в docSectionWarranty()
+  // (renderDocument), щоб не дублювати розмітку/дані в двох місцях.
+  function warrantyTableHtml() {
+    return `<table class="warranty-table">
+      <thead>
+        <tr><th>Компоненти СЕС</th><th>Гарантія</th><th>Термін використання*</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Генерація фотоелектричних модулів</td><td contenteditable="true">30 років</td><td rowspan="5" class="wu" contenteditable="true">до 35 років</td></tr>
+        <tr><td>Цілісність фотоелектричних модулів</td><td contenteditable="true">12 років</td></tr>
+        <tr><td>Система кріплень</td><td contenteditable="true">5 років</td></tr>
+        <tr><td>Монтажні роботи</td><td rowspan="2" contenteditable="true">3 роки</td></tr>
+        <tr><td>Кабельно-провідникова продукція</td></tr>
+        <tr><td>Захисні пристрої та автоматика</td><td rowspan="2" contenteditable="true">5 років</td><td rowspan="2" class="wu" contenteditable="true">до 20 років</td></tr>
+        <tr><td>Інвертори</td></tr>
+        <tr><td>Онлайн-моніторинг параметрів роботи сонячної електростанції</td><td colspan="2" class="wu-life" contenteditable="true">безстроково</td></tr>
+      </tbody>
+    </table>`;
+  }
+
   function pageWarranty(m) {
     return `
     <section class="kp-page warranty-page">
       <img class="logo" src="data:image/png;base64,${ESCORE_LOGO_B64}" alt="escore" />
       <div class="warranty-banner">Гарантійний термін та термін використання</div>
       <div class="warranty-table-wrap">
-        <table class="warranty-table">
-          <thead>
-            <tr><th>Компоненти СЕС</th><th>Гарантія</th><th>Термін використання*</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Генерація фотоелектричних модулів</td><td contenteditable="true">30 років</td><td rowspan="5" class="wu" contenteditable="true">до 35 років</td></tr>
-            <tr><td>Цілісність фотоелектричних модулів</td><td contenteditable="true">12 років</td></tr>
-            <tr><td>Система кріплень</td><td contenteditable="true">5 років</td></tr>
-            <tr><td>Монтажні роботи</td><td rowspan="2" contenteditable="true">3 роки</td></tr>
-            <tr><td>Кабельно-провідникова продукція</td></tr>
-            <tr><td>Захисні пристрої та автоматика</td><td rowspan="2" contenteditable="true">5 років</td><td rowspan="2" class="wu" contenteditable="true">до 20 років</td></tr>
-            <tr><td>Інвертори</td></tr>
-            <tr><td>Онлайн-моніторинг параметрів роботи сонячної електростанції</td><td colspan="2" class="wu-life" contenteditable="true">безстроково</td></tr>
-          </tbody>
-        </table>
+        ${warrantyTableHtml()}
       </div>
     </section>`;
   }
@@ -736,6 +744,200 @@
     },
   };
 
+  // ---------- "Документ" (запит Анни, 2026-07-19) — другий формат виводу:
+  // компактний портретний документ (лого+назва компанії, коротка преамбула,
+  // решта даних — таблицями), замість "слайдів". Читає ТОЙ САМИЙ model, що
+  // й render()/pageXxx() вище — жодного нового парсингу не потрібно, і всі
+  // "розвилки" презентації (ПДВ/C, Розширений бюджет, опційні PvSyst/
+  // сезонні дані) працюють ідентично, бо це одні й ті самі поля model.
+  // Друкується НАТИВНИМ window.print() (див. app.js), НЕ html2canvas+jsPDF
+  // — детальний план і обґрунтування: пам'ять kp_generator_document_mode_plan.
+  function docTable(headCells, bodyHtml, tfootHtml) {
+    return `<table class="doc-table">
+      <thead><tr>${headCells.map((h) => `<th${h.num ? ' class="num"' : ""}>${esc(h.label)}</th>`).join("")}</tr></thead>
+      <tbody>${bodyHtml}</tbody>
+      ${tfootHtml ? `<tfoot>${tfootHtml}</tfoot>` : ""}
+    </table>`;
+  }
+
+  // Проста 2-колонкова таблиця "показник — значення" для технічних/
+  // фінансових показників (rows: [[підпис, значення-як-текст], ...]) —
+  // рядки з порожнім/null значенням автоматично пропускаються (той самий
+  // "не показуємо, якщо нема даних" підхід, що й у stat-card'ах на слайдах).
+  function docKvTable(rows) {
+    const body = rows
+      .filter((r) => r[1] != null && r[1] !== "")
+      .map((r) => `<tr><td>${esc(r[0])}</td><td class="num">${r[1]}</td></tr>`)
+      .join("");
+    if (!body) return "";
+    return `<table class="doc-table doc-kv"><tbody>${body}</tbody></table>`;
+  }
+
+  function docSection(title, innerHtml) {
+    if (!innerHtml) return "";
+    return `<div class="doc-section"><h2>${esc(title)}</h2>${innerHtml}</div>`;
+  }
+
+  function docHeader(m) {
+    return `<div class="doc-header">
+      <div>
+        <img class="logo" src="data:image/png;base64,${ESCORE_LOGO_B64}" alt="escore" />
+        <div class="doc-company">${esc(m.meta.company.name)}</div>
+      </div>
+      <div class="doc-meta">
+        <strong>КОМЕРЦІЙНА ПРОПОЗИЦІЯ</strong><br/>
+        № ${esc(m.meta.kpNumber)} · від ${esc(m.meta.kpDateStr)}<br/>
+        Дійсна ${esc(m.meta.validDays)} календарних днів
+      </div>
+    </div>`;
+  }
+
+  function docTitle(m) {
+    return `<div class="doc-title">${cap(m.tech.stationType)} сонячна електростанція «${esc(m.meta.object)}»${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>`;
+  }
+
+  // Той самий текст-абзац, що й на слайді "Про проект" (pageAbout вище) —
+  // не дублюємо копірайтинг, переюзаємо ту саму логіку побудови речення з
+  // m.tech (сама оновлюється під кожен файл-розрахунок).
+  function docPreamble(m) {
+    const equipParts = [];
+    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
+    if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
+    return `<div class="doc-preamble">
+      <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}
+      для об'єкта «${esc(m.meta.object)}». Рішення забезпечує генерацію власної електроенергії у денні години,
+      коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}</p>
+      ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}
+      <p>Повний цикл робіт «під ключ»: проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</p>
+    </div>`;
+  }
+
+  function docTechTable(m) {
+    return docKvTable([
+      ["Тип станції", m.tech.hasBattery ? "гібридна" : "мережева"],
+      ["Потужність інверторної групи", m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : null],
+      ["Інвертор", m.tech.inverterModel ? esc(m.tech.inverterModel) + (m.tech.invertersQty ? ` — ${m.tech.invertersQty} шт` : "") : null],
+      ["Сонячні панелі", m.tech.panelModel ? esc(stripEquipPrefix(m.tech.panelModel)) + (m.tech.panelsQty ? ` — ${m.tech.panelsQty} шт` : "") : null],
+      ["Потужність масиву фотомодулів", m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) + " кВт" : null],
+      ["Акумулятор", m.tech.hasBattery && m.tech.batteryModel ? esc(m.tech.batteryModel) + (m.tech.batteryQty ? ` — ${m.tech.batteryQty} шт` : "") : null],
+      ["Річна генерація", m.model.annualGenKwh ? fmtNum(m.model.annualGenKwh) + " кВт·год" : null],
+      ["Річна генерація на 1 кВт", m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) + " кВт·год" : null],
+      ["Генерація за 30 років", m.model.gen30y ? fmtNum(m.model.gen30y) + " кВт·год" : null],
+    ]);
+  }
+
+  function docFinTable(m) {
+    return docKvTable([
+      ["Річна економія (100% споживання)", m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : null],
+      ["Строк окупності при діючому тарифі", m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : null],
+      ["Загальний економічний ефект за 30 років", m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : null],
+      ["LCOE30 (собівартість 1 кВт·год)", m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн/кВт·год" : null],
+    ]);
+  }
+
+  // Бюджет — та сама логіка/дані, що й pageBudget() вище (findBudgetEquipItems,
+  // budgetDetailSubsections/BUDGET_MATERIALS/BUDGET_WORKS, Розширений бюджет
+  // теж працює тут ідентично), просто БЕЗ повернутих на 90° підписів
+  // категорій — у документа немає обмеження ширини "слайду", тому категорія
+  // — звичайний виділений рядок-заголовок над своїми позиціями. Це заразом
+  // прибирає весь клас "обрізаної літери" багів, задокументованих для
+  // .budget-cat у kp_generator_status — тут цей підхід просто не потрібен.
+  function docBudgetTable(m) {
+    const equip = findBudgetEquipItems(m.pdv);
+    const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
+    const b = m.budget || {};
+    const noVat = m.clientMode === "cash";
+    const priceHeader = noVat ? "Вартість, $" : "Вартість без ПДВ, $";
+
+    const catRow = (label, price) =>
+      `<tr class="doc-cat-row"><td colspan="2">${esc(label)}</td><td class="num">${fmtUsd(price)}</td></tr>`;
+    const itemRows = (items, getName, getQty) =>
+      items.map((it) => {
+        const q = getQty(it);
+        return `<tr><td>${esc(getName(it))}</td><td class="num">${q == null ? "—" : fmtNum(q)}</td><td></td></tr>`;
+      }).join("");
+
+    let body = catRow("Обладнання", b.equipmentCost) + itemRows(equipRows, (it) => it.name, (it) => it.qty);
+
+    const sub = budgetDetailSubsections(m);
+    if (sub) {
+      sub.forEach((s) => {
+        const items = s.items && s.items.length ? s.items : [{ name: "—", qty: null }];
+        body += catRow(s.label, s.price) + itemRows(items, budgetDetailNames, budgetDetailQty);
+      });
+    } else {
+      body += catRow("Витратні матеріали", b.materialsCost) + itemRows(BUDGET_MATERIALS.map((n) => ({ name: n, qty: 1 })), (it) => it.name, (it) => it.qty);
+    }
+    body += catRow("Роботи", b.worksCost) + itemRows(BUDGET_WORKS.map((n) => ({ name: n, qty: 1 })), (it) => it.name, (it) => it.qty);
+
+    const totalsHtml = noVat
+      ? `<tr class="grand"><td colspan="2">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
+      : `<tr><td colspan="2">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
+         <tr><td colspan="2">ПДВ</td><td class="num">${fmtUsd(b.vat)}</td></tr>
+         <tr class="grand"><td colspan="2">Загальна вартість з ПДВ:</td><td class="num">${fmtUsd(b.grossTotal)}</td></tr>`;
+
+    return docTable(
+      [{ label: "Найменування" }, { label: "Кількість", num: true }, { label: priceHeader, num: true }],
+      body,
+      totalsHtml
+    );
+  }
+
+  function docPvsystBlock(m) {
+    if (!m.pvsystImage) return "";
+    return `<div class="doc-img-wrap"><img src="${m.pvsystImage}"/><div class="cap">Карта затінення / 3D-модель об'єкта (PVsyst)</div></div>`;
+  }
+
+  // Той самий погодинний масив, що вже живить лінійний графік на слайді
+  // "05" (pageSeasonal/wireSeasonalChart вище) — тут просто таблиця замість
+  // Chart.js, бо в документі "все — таблицями" (запит Анни).
+  function docSeasonalTable(m) {
+    const seasonal = m.seasonalHourly;
+    if (!seasonal || !seasonal.series.length) return "";
+    const head = [{ label: "Година" }].concat(seasonal.series.map((s) => ({ label: s.label, num: true })));
+    const body = seasonal.hours.map((h, i) => {
+      const cells = seasonal.series.map((s) => `<td class="num">${fmtNum(s.data[i])}</td>`).join("");
+      return `<tr><td>${esc(h)}H</td>${cells}</tr>`;
+    }).join("");
+    return docTable(head, body, null);
+  }
+
+  function docManagerBlock() {
+    const mgr = window.KP_CONFIG.MANAGER;
+    return `<div class="doc-manager">
+      <b>${esc(mgr.name)}</b>, ${esc(mgr.position)}<br/>
+      ${esc(mgr.email)} · ${esc(mgr.phone)}<br/>
+      ${esc(mgr.address).replace(/\n/g, ", ")}
+    </div>`;
+  }
+
+  function renderDocument(model) {
+    const now = new Date();
+    model.meta.kpNumber = model.meta.kpNumber || defaultKpNumber(now);
+    model.meta.kpDateStr = model.meta.kpDateStr || fmtDate(now);
+    model.meta.company = window.KP_CONFIG.COMPANY;
+    model.tech = buildTechSpec(model.pdv);
+
+    const html = `
+    <div class="doc-root">
+      ${docHeader(model)}
+      ${docTitle(model)}
+      ${docSection("Технічне рішення", docPreamble(model))}
+      ${docSection("Технічні характеристики", docTechTable(model))}
+      ${docSection("Фінансові показники", docFinTable(model))}
+      ${docSection("Бюджет реалізації", docBudgetTable(model))}
+      ${docSection("Імітаційна модель СЕС", docPvsystBlock(model))}
+      ${docSection("Погодинна генерація по сезонах", docSeasonalTable(model))}
+      ${docSection("Гарантійний термін та термін використання", warrantyTableHtml())}
+      ${docManagerBlock()}
+    </div>`;
+
+    const holder = document.getElementById("kp-doc");
+    holder.innerHTML = html;
+    holder.classList.add("ready");
+  }
+
   function render(model) {
     const now = new Date();
     model.meta.kpNumber = model.meta.kpNumber || defaultKpNumber(now);
@@ -795,5 +997,5 @@
     }
   }
 
-  window.KpRender = { render };
+  window.KpRender = { render, renderDocument };
 })();

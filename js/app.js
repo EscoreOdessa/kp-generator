@@ -28,6 +28,17 @@
       // про помилку нижче.
       const modeInput = document.querySelector('input[name="in-mode"]:checked');
       const mode = modeInput ? modeInput.value : "pdv";
+      // "Документ" (запит Анни, 2026-07-19) — незалежний від тумблера ПДВ/C
+      // і від "Розширеного бюджету" перемикач формату виводу: "presentation"
+      // (нинішні слайди, render()) або "document" (компактний портретний
+      // документ, renderDocument()) — обидва читають той самий model нижче.
+      // Зберігаємо обраний формат у data-атрибут #kp-doc (не просто читаємо
+      // радіо-кнопку знову в handleSavePdf), щоб кнопка друку завжди
+      // друкувала саме те, що ЗАРАЗ відображено, навіть якщо менеджер
+      // перемкнув тумблер формату ПІСЛЯ генерації, не натиснувши "Сформувати
+      // КП" повторно.
+      const formatInput = document.querySelector('input[name="in-format"]:checked');
+      const format = formatInput ? formatInput.value : "presentation";
       // "Розширений бюджет" (запит Анни, 2026-07-18) — незалежний чекбокс,
       // не пов'язаний з тумблером ПДВ/C вище. Якщо увімкнено, sheets.js
       // додатково читає вкладку "Кошторис_Наявність обладнання" й повертає
@@ -130,8 +141,14 @@
         clientMode: mode,
       };
 
-      KpRender.render(model);
-      document.getElementById("kp-doc").scrollIntoView({ behavior: "smooth" });
+      const docHolder = document.getElementById("kp-doc");
+      docHolder.dataset.format = format;
+      if (format === "document") {
+        KpRender.renderDocument(model);
+      } else {
+        KpRender.render(model);
+      }
+      docHolder.scrollIntoView({ behavior: "smooth" });
       setStatus("Готово. Перевірте документ нижче і натисніть «Друк / зберегти як PDF».");
     } catch (err) {
       console.error(err);
@@ -172,9 +189,43 @@
   // картинки вставляються в PDF одна на сторінку через jsPDF — це
   // гарантує, що PDF завжди виглядає так само, як прев'ю на екрані,
   // незалежно від браузера користувача.
+  // "Документ" (запит Анни, 2026-07-19) — друк НАТИВНИМ window.print(), а не
+  // html2canvas+jsPDF: контент документа природно переливається між
+  // сторінками (немає фіксованих "слайдів"), із чим браузер сам добре
+  // справляється через @page doc-page + page-break-inside:avoid у
+  // style.css — саме той сценарій, у якому html2canvas-скріншот кожної
+  // "сторінки" окремо не має сенсу (сторінок як дискретних елементів DOM
+  // тут просто немає, є один безперервний .doc-root). Див. коментар над
+  // тумблером формату в index.html і план у пам'яті
+  // kp_generator_document_mode_plan.
+  async function handleSavePdfDocument(doc, btn) {
+    btn.disabled = true;
+    try {
+      await waitForImages(doc);
+      window.print();
+      setStatus("Відкрито діалог друку — оберіть «Зберегти як PDF».");
+    } catch (err) {
+      console.error(err);
+      setStatus("Не вдалось відкрити діалог друку: " + (err.message || err), true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   async function handleSavePdf() {
     const btn = document.getElementById("btn-print");
     const doc = document.getElementById("kp-doc");
+    const format = doc.dataset.format || "presentation";
+
+    if (format === "document") {
+      if (!doc.querySelector(".doc-root")) {
+        setStatus("Спочатку сформуйте КП.", true);
+        return;
+      }
+      await handleSavePdfDocument(doc, btn);
+      return;
+    }
+
     const pages = doc.querySelectorAll(".kp-page");
     if (!pages.length) {
       setStatus("Спочатку сформуйте КП.", true);
