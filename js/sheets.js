@@ -342,6 +342,106 @@
     return { equipmentCost, materialsCost, worksCost, nettoTotal, grossTotal, vat };
   }
 
+  // ---------- "Розширений бюджет" — розшифровка "Витратні матеріали" по
+  // комплектуючим (запит Анни, 2026-07-18, обговорено окремо перед кодом) ----------
+  // Чекбокс на формі, незалежний від тумблера ПДВ/C. Коли увімкнено, група
+  // "Витратні матеріали" на сторінці "03 Бюджет реалізації" замінюється на
+  // 3 підрозділи: "Автоматика захисту змінного струму", "Автоматика захисту
+  // фотоелектричних модулів (постійний струм)", "Кабельно-провідникова
+  // продукція + конектори МС4". ВАЖЛИВО — два РІЗНІ джерела даних:
+  // 1) НАЗВИ комплектуючих (список під кожним підрозділом) — беруться з
+  //    колонки B ("Найменування") вкладки "Кошторис_Наявність обладнання"
+  //    (та сама вкладка, що вже використовується для назви об'єкта, див.
+  //    getObjectNameFromSheet нижче) — parseKoshtorysDetail() нижче.
+  // 2) ЦІНА (одна на підрозділ, не по кожному рядку) — НЕ з Кошторис (там
+  //    колонки "Ціна Готівка"/"Вартість Готівка, $" — це собівартість,
+  //    закупівельна ціна, не клієнтська!). Ціна береться з категорії "2"
+  //    ("Кабельна група та витратні матеріали") номенклатурної вкладки
+  //    (ПДВ або варіант "C" — та сама, що вже розібрана як pdv), де вже
+  //    ІСНУЮТЬ рядки 2.2/2.3/2.4 з ТОЧНО такими самими назвами (перевірено
+  //    наживо на обох вкладках) — findBudgetDetailPrices() нижче просто
+  //    знаходить ці 3 позиції за текстом назви й бере вже розібране поле
+  //    lineNetto (те саме, що дає правильну колонку для кожного режиму —
+  //    L "з націнкою" для ПДВ, I "для клієнта" для варіанту "C").
+  function normForMatch(s) {
+    return String(s == null ? "" : s).toLowerCase().trim();
+  }
+  // "Захист АC"/"Захист DC" — у реальному файлі літери можуть бути
+  // мішаним шрифтом (кирилична "А" виглядає як латинська "A" тощо), тому
+  // символьний клас [aа]/[cс] приймає обидва варіанти замість жорсткого
+  // порівняння рядка.
+  const KOSHTORYS_AC_RE = /захист[^\p{L}]*[aа][cс]\b/iu;
+  const KOSHTORYS_DC_RE = /захист[^\p{L}]*(dc|дс)\b/iu;
+  const KOSHTORYS_CABLE_RE = /кабельн\S*\s*продукц/iu;
+  const KOSHTORYS_MATERIALS_RE = /витратн\S*\s*матеріал/iu;
+
+  // Знаходить індекс рядка, де КОЛОНКА A (перша) відповідає одному з
+  // регулярних виразів вище — так позначені рядки-заголовки підрозділів
+  // на вкладці "Кошторис_Наявність обладнання".
+  function findKoshtorysRowIndex(rows, re, fromIdx) {
+    for (let r = fromIdx; r < rows.length; r++) {
+      const a = normForMatch(rows[r] && rows[r][0]);
+      if (a && re.test(a)) return r;
+    }
+    return -1;
+  }
+
+  // Збирає назви комплектуючих (колонка B, індекс 1) у діапазоні рядків
+  // (fromIdx, toIdx) — межі не включаються (fromIdx — сам рядок-заголовок
+  // підрозділу, toIdx — рядок-заголовок НАСТУПНОГО підрозділу/межі).
+  // Пропускає рядки без назви АБО без ціни (колонка G, індекс 6) — тобто
+  // порожні рядки-заготовки з реального файлу (запит Анни, 2026-07-18:
+  // "строки без названия/цены или с $0 ... скрывать").
+  function collectKoshtorysItems(rows, fromIdx, toIdx) {
+    const items = [];
+    if (fromIdx < 0 || toIdx < 0 || toIdx <= fromIdx) return items;
+    for (let r = fromIdx + 1; r < toIdx; r++) {
+      const row = rows[r] || [];
+      const name = (row[1] || "").toString().trim();
+      if (!name) continue; // без назви — пропускаємо
+      const price = numeric(row[6]);
+      if (!price || price === 0) continue; // без ціни/$0 — пропускаємо (заготовка)
+      items.push(name);
+    }
+    return items;
+  }
+
+  function parseKoshtorysDetail(rows) {
+    const acIdx = findKoshtorysRowIndex(rows, KOSHTORYS_AC_RE, 0);
+    const dcIdx = findKoshtorysRowIndex(rows, KOSHTORYS_DC_RE, acIdx >= 0 ? acIdx + 1 : 0);
+    const cableIdx = findKoshtorysRowIndex(rows, KOSHTORYS_CABLE_RE, dcIdx >= 0 ? dcIdx + 1 : 0);
+    const materialsIdx = findKoshtorysRowIndex(rows, KOSHTORYS_MATERIALS_RE, cableIdx >= 0 ? cableIdx + 1 : 0);
+    return {
+      ac: collectKoshtorysItems(rows, acIdx, dcIdx >= 0 ? dcIdx : acIdx + 30),
+      dc: collectKoshtorysItems(rows, dcIdx, cableIdx >= 0 ? cableIdx : (dcIdx >= 0 ? dcIdx + 30 : -1)),
+      cable: collectKoshtorysItems(rows, cableIdx, materialsIdx >= 0 ? materialsIdx : (cableIdx >= 0 ? cableIdx + 30 : -1)),
+    };
+  }
+
+  // Знаходить позицію в масиві items за ключовими словами в назві (та сама
+  // "пошук за текстом" філософія, що й решта парсера — стійка до дрібних
+  // відмінностей формулювання в реальних файлах клієнтів).
+  function findItemByKeywords(items, keywords) {
+    return (items || []).find((it) => {
+      const n = (it.name || "").toLowerCase();
+      return keywords.every((kw) => n.includes(kw));
+    });
+  }
+
+  function findBudgetDetailPrices(pdv) {
+    const equipIdx = findEquipCategoryIndex(pdv.categories);
+    const cat2 = equipIdx >= 0 ? pdv.categories[equipIdx + 1] : null;
+    const items = cat2 ? cat2.items : [];
+    const acItem = findItemByKeywords(items, ["автоматика", "змінного"]);
+    const dcItem = findItemByKeywords(items, ["автоматика", "постійний"]);
+    const cableItem = findItemByKeywords(items, ["кабельно", "провідникова"]);
+    return {
+      acPrice: acItem ? acItem.lineNetto : null,
+      dcPrice: dcItem ? dcItem.lineNetto : null,
+      cablePrice: cableItem ? cableItem.lineNetto : null,
+    };
+  }
+
   // ---------- Вкладка "Моделювання Фін. показників роботи СЕС" ----------
   function findLabelValue(rows, keywords, exclude) {
     for (let r = 0; r < rows.length; r++) {
@@ -429,7 +529,16 @@
   // повна логіка з ПДВ; "cash" — вкладка KP_CONFIG.SHEET_TAB_CASH (у формі
   // на сайті показується просто як варіант "C", без слів
   // "готівка"/"ФОП" — так попросила Анна, 2026-07-18), без податкового рядка.
-  async function loadCalcFromSheet(sheetUrlOrId, mode) {
+  // opts.budgetDetail (2026-07-18, "Розширений бюджет" — див. коментар над
+  // parseKoshtorysDetail/findBudgetDetailPrices вище): якщо true, додатково
+  // завантажує вкладку "Кошторис_Наявність обладнання" й повертає
+  // result.budgetDetail. Fail-soft, як інші необов'язкові джерела в цьому
+  // проєкті (PvSyst.pdf, сезонні графіки) — якщо вкладка не читається чи не
+  // має очікуваної структури, budgetDetail просто лишається null, а решта
+  // КП формується як завжди (сторінка "03" сама впаде назад на стандартний
+  // хардкод-список, див. kp-render.js pageBudget()).
+  async function loadCalcFromSheet(sheetUrlOrId, mode, opts) {
+    opts = opts || {};
     mode = mode === "cash" ? "cash" : "pdv";
     const id = extractSpreadsheetId(sheetUrlOrId);
     const tabName = mode === "cash" ? window.KP_CONFIG.SHEET_TAB_CASH : window.KP_CONFIG.SHEET_TAB_PDV;
@@ -439,16 +548,33 @@
     ]);
     const pdv = mode === "cash" ? parseCashSheet(pdvRows) : parsePdvSheet(pdvRows);
     const budgetOpts = mode === "cash" ? { totalColIdx: 8, noVat: true } : { totalColIdx: 11 };
-    return {
+    const result = {
       pdv,
       model: parseModelSheet(modelRows),
       budget: parseBudgetCells(pdv, pdvRows, budgetOpts),
     };
+    if (opts.budgetDetail) {
+      try {
+        const koshtRows = await fetchSheetValues(id, window.KP_CONFIG.SHEET_TAB_OBJECT_NAME);
+        const detailItems = parseKoshtorysDetail(koshtRows);
+        const detailPrices = findBudgetDetailPrices(pdv);
+        result.budgetDetail = {
+          ac: { items: detailItems.ac, price: detailPrices.acPrice },
+          dc: { items: detailItems.dc, price: detailPrices.dcPrice },
+          cable: { items: detailItems.cable, price: detailPrices.cablePrice },
+        };
+      } catch (e) {
+        console.warn("Розширений бюджет: не вдалось завантажити/розпарсити вкладку Кошторис (не критично):", e);
+        result.budgetDetail = null;
+      }
+    }
+    return result;
   }
 
   window.KpSheets = {
     loadCalcFromSheet, extractSpreadsheetId,
     parsePdvSheet, parseCashSheet, parseModelSheet, parseBudgetCells,
+    parseKoshtorysDetail, findBudgetDetailPrices,
   };
 })();
 

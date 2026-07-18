@@ -28,9 +28,16 @@
       // про помилку нижче.
       const modeInput = document.querySelector('input[name="in-mode"]:checked');
       const mode = modeInput ? modeInput.value : "pdv";
+      // "Розширений бюджет" (запит Анни, 2026-07-18) — незалежний чекбокс,
+      // не пов'язаний з тумблером ПДВ/C вище. Якщо увімкнено, sheets.js
+      // додатково читає вкладку "Кошторис_Наявність обладнання" й повертає
+      // data.budgetDetail (fail-soft: null, якщо вкладка не читається/не
+      // має очікуваної структури — сторінка "03" тоді сама впаде назад на
+      // стандартний хардкод-список, див. kp-render.js).
+      const budgetDetailOn = document.getElementById("in-budget-detail").checked;
 
       setStatus("Читаємо Google Sheet...");
-      const data = await KpSheets.loadCalcFromSheet(sheetUrl, mode);
+      const data = await KpSheets.loadCalcFromSheet(sheetUrl, mode, { budgetDetail: budgetDetailOn });
       const pdv = data.pdv, modelData = data.model;
       if (!pdv.categories.length) {
         const modeLabel = mode === "cash" ? "C" : "ПДВ";
@@ -117,6 +124,7 @@
         pdv,
         model: modelData,
         budget: data.budget,
+        budgetDetail: data.budgetDetail || null,
         pvsystImage,
         seasonalHourly,
         clientMode: mode,

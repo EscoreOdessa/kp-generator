@@ -314,16 +314,54 @@
 
   function budgetGroupRows(items, getName, getQty, priceVal, catLabel, groupClass) {
     if (!items.length) return "";
+    // Довгі підписи підрозділів (напр. "Автоматика захисту фотоелектричних
+    // модулів (постійний струм)" — з'явились разом із "Розширеним
+    // бюджетом", 2026-07-18) не влазять в один рядок повернутого на 90°
+    // тексту при короткому блоці рядків, як короткі "Обладнання"/"Роботи".
+    // Клас "long" вмикає менший шрифт + перенос рядків (див. style.css) —
+    // без цього текст просто вилазив би за межі мержованої комірки.
+    const catClass = "budget-cat" + (catLabel && catLabel.length > 20 ? " long" : "");
     return items.map((it, i) => {
       const name = getName(it);
       const qty = getQty(it);
       const first = i === 0;
       return `<tr class="${groupClass}">
-        ${first ? `<td class="budget-cat" rowspan="${items.length}"><span>${esc(catLabel)}</span></td>` : ""}
+        ${first ? `<td class="${catClass}" rowspan="${items.length}"><span>${esc(catLabel)}</span></td>` : ""}
         <td contenteditable="true">${esc(name)}</td>
         <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
         ${first ? `<td class="num budget-price" rowspan="${items.length}"><span contenteditable="true">${fmtUsd(priceVal)}</span></td>` : ""}
       </tr>`;
+    }).join("");
+  }
+
+  // "Розширений бюджет" (запит Анни, 2026-07-18, обговорено окремо перед
+  // кодом — детальний план збережено в пам'яті проєкту): коли увімкнено
+  // чекбокс на формі (m.budgetDetail не null — заповнюється в app.js з
+  // KpSheets.loadCalcFromSheet(..., {budgetDetail:true})), група
+  // "Витратні матеріали" замінюється на 3 підрозділи з РЕАЛЬНИМИ назвами
+  // комплектуючих (з вкладки "Кошторис_Наявність обладнання") замість
+  // хардкод-переліку BUDGET_MATERIALS. Кожен підрозділ — той самий
+  // budgetGroupRows(), просто без кількості (getQty завжди null, "—") і з
+  // ціною, вже підрахованою в sheets.js findBudgetDetailPrices(). Якщо
+  // чекбокс вимкнено АБО вкладку Кошторис не вдалось прочитати/розпарсити
+  // (m.budgetDetail лишається null, fail-soft — див. sheets.js), сторінка
+  // просто повертається до старого хардкод-списку — не ламається.
+  function budgetDetailNames(n) { return n; }
+  function budgetDetailQty() { return null; }
+
+  function budgetMaterialsHtml(m) {
+    const detail = m.budgetDetail;
+    if (!detail) {
+      return budgetGroupRows(BUDGET_MATERIALS, (n) => n, () => 1, (m.budget || {}).materialsCost, "Витратні матеріали", "grp-mat");
+    }
+    const sub = [
+      { items: detail.ac && detail.ac.items, price: detail.ac && detail.ac.price, label: "Автоматика захисту змінного струму" },
+      { items: detail.dc && detail.dc.items, price: detail.dc && detail.dc.price, label: "Автоматика захисту фотоелектричних модулів (постійний струм)" },
+      { items: detail.cable && detail.cable.items, price: detail.cable && detail.cable.price, label: "Кабельно-провідникова продукція + конектори МС4" },
+    ];
+    return sub.map((s) => {
+      const items = s.items && s.items.length ? s.items : ["—"];
+      return budgetGroupRows(items, budgetDetailNames, budgetDetailQty, s.price, s.label, "grp-mat");
     }).join("");
   }
 
@@ -355,7 +393,7 @@
           </thead>
           <tbody>
             ${budgetGroupRows(equipRows, (it) => it.name, (it) => it.qty, b.equipmentCost, "Обладнання", "grp-equip")}
-            ${budgetGroupRows(BUDGET_MATERIALS, (n) => n, () => 1, b.materialsCost, "Витратні матеріали", "grp-mat")}
+            ${budgetMaterialsHtml(m)}
             ${budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works")}
           </tbody>
           <tfoot>
