@@ -439,12 +439,23 @@
     const dcHtml = budgetGroupRows(sub[1].items && sub[1].items.length ? sub[1].items : ["—"], budgetDetailNames, budgetDetailQty, sub[1].price, sub[1].label, "grp-mat");
     const cableHtml = budgetGroupRows(sub[2].items && sub[2].items.length ? sub[2].items : ["—"], budgetDetailNames, budgetDetailQty, sub[2].price, sub[2].label, "grp-mat");
 
+    // Перебалансовано ПІСЛЯ другої живої перевірки (2026-07-18, той самий
+    // день): початковий розподіл (AC+DC на 1-й, Кабельна продукція+Роботи+
+    // підсумки на 2-й) все одно переповнював 2-гу сторінку — 18 рядків
+    // кабельної групи + 5 рядків Роботи + 3 підсумкові = 26 рядків більше,
+    // ніж будь-коли вміщувалось в одну сторінку. Роботи (завжди рівно 5
+    // хардкод-рядків) перенесено на 1-шу сторінку — вона й так мала багато
+    // вільного місця (Обладнання+AC+DC ≈ 15 рядків), а 2-га лишається лише
+    // з Кабельно-провідниковою продукцією (найдовший підрозділ, до ~18-20
+    // рядків з практики) + підсумками — це майже точно той самий обсяг
+    // (~21-22 рядки разом з шапкою/футером), що й стара однасторінкова
+    // версія без деталізації, яка, за попереднім досвідом, влазить.
     const page1 = `
     <section class="kp-page budget-page">
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
       <div class="budget-table-wrap">
-        ${budgetTable(equipHtml + acHtml + dcHtml, priceHeader, null)}
+        ${budgetTable(equipHtml + acHtml + dcHtml + worksHtml, priceHeader, null)}
       </div>
     </section>`;
 
@@ -453,7 +464,7 @@
       ${pageHeader(m.meta)}
       <div class="section-title">Бюджет реалізації (продовження)</div>
       <div class="budget-layout">
-        ${budgetTable(cableHtml + worksHtml, priceHeader, totalsHtml)}
+        ${budgetTable(cableHtml, priceHeader, totalsHtml)}
         ${budgetNotesAside()}
       </div>
     </section>`;
