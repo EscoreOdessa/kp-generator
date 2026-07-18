@@ -790,9 +790,23 @@
     return `<table class="doc-table doc-kv"><tbody>${body}</tbody></table>`;
   }
 
-  function docSection(title, innerHtml) {
+  // opts.avoidBreak (запит Анни, 2026-07-19): короткі секції — де таблиця
+  // не така довга, щоб МУСИЛА розбиватись на кілька сторінок при друку —
+  // отримують клас "doc-section-avoid-break" (page-break-inside:avoid у
+  // style.css), щоб браузер не розривав їх посередині, залишаючи заголовок
+  // на одній сторінці, а рядки таблиці на наступній. Навмисно НЕ
+  // застосовується до "Бюджет реалізації" — та таблиця може бути довгою
+  // (особливо з увімкненим Розширеним бюджетом), і примусова заборона
+  // розриву там або не спрацює (таблиця однаково довша за сторінку), або
+  // залишить велику порожню зону внизу попередньої сторінки — для неї й
+  // так є власний, точковий page-break-inside:avoid на кожному <tr>
+  // (table.doc-table tr{...} у style.css), який дозволяє розбивати МІЖ
+  // рядками, просто не посередині одного рядка.
+  function docSection(title, innerHtml, opts) {
     if (!innerHtml) return "";
-    return `<div class="doc-section"><h2>${esc(title)}</h2>${innerHtml}</div>`;
+    opts = opts || {};
+    const cls = "doc-section" + (opts.avoidBreak ? " doc-section-avoid-break" : "");
+    return `<div class="${cls}"><h2>${esc(title)}</h2>${innerHtml}</div>`;
   }
 
   function docHeader(m) {
@@ -925,12 +939,12 @@
     <div class="doc-root">
       ${docHeader(model)}
       ${docTitle(model)}
-      ${docSection("Технічне рішення", docPreamble(model))}
-      ${docSection("Технічні характеристики", docTechTable(model))}
-      ${docSection("Фінансові показники", docFinTable(model))}
+      ${docSection("Технічне рішення", docPreamble(model), { avoidBreak: true })}
+      ${docSection("Технічні характеристики", docTechTable(model), { avoidBreak: true })}
+      ${docSection("Фінансові показники", docFinTable(model), { avoidBreak: true })}
       ${docSection("Бюджет реалізації", docBudgetTable(model))}
       ${docSection("Імітаційна модель СЕС", docPvsystBlock(model))}
-      ${docSection("Гарантійний термін та термін використання", warrantyTableHtml())}
+      ${docSection("Гарантійний термін та термін використання", warrantyTableHtml(), { avoidBreak: true })}
       ${docManagerBlock()}
     </div>`;
 
