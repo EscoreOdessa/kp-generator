@@ -331,6 +331,15 @@
     const equip = findBudgetEquipItems(m.pdv);
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
     const b = m.budget || {};
+    // Режим "C" (без ПДВ, запит Анни 2026-07-18) — не показуємо ані рядок
+    // податку, ані слово "ПДВ" в підписах підсумку/шапки таблиці взагалі.
+    const noVat = m.clientMode === "cash";
+    const priceHeader = noVat ? "Вартість, $" : "Вартість<br/>без ПДВ, $";
+    const totalsHtml = noVat
+      ? `<tr class="sum grand"><td colspan="3">Загальна вартість:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>`
+      : `<tr class="sum"><td colspan="3">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
+            <tr class="sum"><td colspan="3">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
+            <tr class="sum grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
     return `
     <section class="kp-page budget-page">
       ${pageHeader(m.meta)}
@@ -341,7 +350,7 @@
             <tr>
               <th colspan="2">Найменування</th>
               <th class="num">Кількість</th>
-              <th class="num">Вартість<br/>без ПДВ, $</th>
+              <th class="num">${priceHeader}</th>
             </tr>
           </thead>
           <tbody>
@@ -350,9 +359,7 @@
             ${budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works")}
           </tbody>
           <tfoot>
-            <tr class="sum"><td colspan="3">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
-            <tr class="sum"><td colspan="3">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
-            <tr class="sum grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>
+            ${totalsHtml}
           </tfoot>
         </table>
         <aside class="budget-notes">
