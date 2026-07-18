@@ -908,7 +908,7 @@
     return `<div class="doc-manager">
       <b>${esc(mgr.name)}</b>, ${esc(mgr.position)}<br/>
       ${esc(mgr.email)} · ${esc(mgr.phone)}<br/>
-      ${esc(mgr.address).replace(/\n/g, ", ")}
+      ${esc(mgr.address).replace(/,?\n/g, ", ")}
     </div>`;
   }
 
