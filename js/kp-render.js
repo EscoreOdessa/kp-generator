@@ -14,6 +14,18 @@
     n === null || n === undefined || isNaN(n) ? "—" : Number(n).toLocaleString("uk-UA", { maximumFractionDigits: d });
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
+  // Назва об'єкта (напр. «Швейні виробництва») тепер показується ЛИШЕ якщо
+  // її вписано вручну в поле "Об'єкт" на формі (запит Анни, 2026-07-19) —
+  // раніше, коли поле лишалось порожнім, app.js підставляв назву,
+  // автоматично прочитану з комірки A1 вкладки "Кошторис_Наявність
+  // обладнання", а якщо і там було порожньо — плейсхолдер "[Назва об'єкта]".
+  // Тепер app.js більше НІЧОГО туди не підставляє (m.meta.object лишається
+  // порожнім рядком, якщо поле форми порожнє) — обидва хелпери нижче
+  // повертають "", коли m.meta.object порожній, щоб жоден заголовок/речення
+  // з назвою об'єкта не "ламався" на порожніх лапках «».
+  function objectLabel(m) { return m.meta.object ? ` «${esc(m.meta.object)}»` : ""; }
+  function objectClause(m) { return m.meta.object ? ` для об'єкта «${esc(m.meta.object)}»` : ""; }
+
   function pad2(n) { return String(n).padStart(2, "0"); }
   function defaultKpNumber(d) {
     return "КП-" + String(d.getFullYear()).slice(2) + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "-" + pad2(d.getHours()) + pad2(d.getMinutes());
@@ -96,15 +108,21 @@
     <section class="kp-page cover-page">
       ${pageHeader(m.meta, "cover")}
       <div class="kp-eyebrow">Сонячна електростанція під ключ</div>
-      <div class="kp-title">${cap(m.tech.stationType)} СЕС «${esc(m.meta.object)}»${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>
+      <div class="kp-title">${cap(m.tech.stationType)} СЕС${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>
       <div class="kp-desc">
         Тип рішення: <b>${esc(m.tech.stationType)} сонячна електростанція</b>${m.tech.hasBattery ? " та акумуляторна система (автономія / резерв)" : ""} — генерація
         власної електроенергії для потреб об'єкта зі зниженням витрат на електропостачання.
       </div>
       <!-- Об'єкт/Виконавець збільшено та виділено картками (запит Анни,
-           2026-07-07) — той самий візуальний стиль, що й у stat-card. -->
+           2026-07-07) — той самий візуальний стиль, що й у stat-card. Значення
+           "Об'єкт" тепер порожнє, якщо назву не вписано вручну у форму (запит
+           Анни, 2026-07-19) — раніше сюди підставлялось "—" навіть коли назва
+           взагалі не задавалась; тепер, коли app.js більше НЕ підставляє ані
+           автоматично прочитану з файлу назву, ані плейсхолдер (див.
+           objectLabel() нижче й коментар у app.js), тут просто нічого не
+           пишеться, якщо m.meta.object порожній. -->
       <div class="meta-grid">
-        <div><div class="k">Об'єкт</div><div class="v">${esc(m.meta.object) || "—"}</div></div>
+        <div><div class="k">Об'єкт</div><div class="v">${esc(m.meta.object)}</div></div>
         <div><div class="k">Виконавець</div><div class="v">${esc(m.meta.company.name)}</div></div>
       </div>
       <!-- Підпис над фото замість підпису під фото з назвою файлу (запит
@@ -164,8 +182,7 @@
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">01</span> Про проєкт</div>
       <div class="kp-body">
-        <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}
-        для об'єкта «${esc(m.meta.object)}». Рішення забезпечує генерацію власної електроенергії у денні години,
+        <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. Рішення забезпечує генерацію власної електроенергії у денні години,
         коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}</p>
         ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}
         <p>Повний цикл робіт «під ключ»: проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</p>
@@ -793,7 +810,7 @@
   }
 
   function docTitle(m) {
-    return `<div class="doc-title">${cap(m.tech.stationType)} сонячна електростанція «${esc(m.meta.object)}»${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>`;
+    return `<div class="doc-title">${cap(m.tech.stationType)} сонячна електростанція${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>`;
   }
 
   // Той самий текст-абзац, що й на слайді "Про проект" (pageAbout вище) —
@@ -805,8 +822,7 @@
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     return `<div class="doc-preamble">
-      <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}
-      для об'єкта «${esc(m.meta.object)}». Рішення забезпечує генерацію власної електроенергії у денні години,
+      <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. Рішення забезпечує генерацію власної електроенергії у денні години,
       коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}</p>
       ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}
       <p>Повний цикл робіт «під ключ»: проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</p>
@@ -889,20 +905,6 @@
     return `<div class="doc-img-wrap"><img src="${m.pvsystImage}"/><div class="cap">Карта затінення / 3D-модель об'єкта (PVsyst)</div></div>`;
   }
 
-  // Той самий погодинний масив, що вже живить лінійний графік на слайді
-  // "05" (pageSeasonal/wireSeasonalChart вище) — тут просто таблиця замість
-  // Chart.js, бо в документі "все — таблицями" (запит Анни).
-  function docSeasonalTable(m) {
-    const seasonal = m.seasonalHourly;
-    if (!seasonal || !seasonal.series.length) return "";
-    const head = [{ label: "Година" }].concat(seasonal.series.map((s) => ({ label: s.label, num: true })));
-    const body = seasonal.hours.map((h, i) => {
-      const cells = seasonal.series.map((s) => `<td class="num">${fmtNum(s.data[i])}</td>`).join("");
-      return `<tr><td>${esc(h)}H</td>${cells}</tr>`;
-    }).join("");
-    return docTable(head, body, null);
-  }
-
   function docManagerBlock() {
     const mgr = window.KP_CONFIG.MANAGER;
     return `<div class="doc-manager">
@@ -928,7 +930,6 @@
       ${docSection("Фінансові показники", docFinTable(model))}
       ${docSection("Бюджет реалізації", docBudgetTable(model))}
       ${docSection("Імітаційна модель СЕС", docPvsystBlock(model))}
-      ${docSection("Погодинна генерація по сезонах", docSeasonalTable(model))}
       ${docSection("Гарантійний термін та термін використання", warrantyTableHtml())}
       ${docManagerBlock()}
     </div>`;

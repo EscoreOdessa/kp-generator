@@ -106,14 +106,16 @@
         }
       }
 
-      let objectName = document.getElementById("in-object").value.trim();
-      if (!objectName) {
-        try {
-          const name = await KpSheets.getObjectNameFromSheet(sheetUrl);
-          if (name) objectName = name;
-        } catch (e) { /* non-fatal */ }
-      }
-      if (!objectName) objectName = "[Назва об'єкта]";
+      // Назва об'єкта (запит Анни, 2026-07-19) — тепер показується в КП
+      // ЛИШЕ якщо менеджер сам вписав її в поле "Об'єкт" на формі. Раніше
+      // тут був fallback на автоматичне читання комірки A1 вкладки
+      // "Кошторис_Наявність обладнання" (KpSheets.getObjectNameFromSheet),
+      // а якщо і там було порожньо — на плейсхолдер "[Назва об'єкта]" — обидва
+      // прибрані навмисно: порожній objectName ("") тепер означає "нічого не
+      // писати", а не "підстав щось замість". kp-render.js (objectLabel/
+      // objectClause) сам ховає всі місця, де мала б бути назва (заголовки,
+      // речення "для об'єкта «...»"), коли m.meta.object порожній.
+      const objectName = document.getElementById("in-object").value.trim();
 
       const model = {
         meta: {
