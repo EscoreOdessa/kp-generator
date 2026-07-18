@@ -7,12 +7,17 @@
 // часом трохи змінюватись. Тому тут навмисно НЕ використовуються жорсткі
 // координати комірок (A1, C14 і т.п.) — натомість парсер шукає потрібні
 // колонки/значення за текстом заголовків/підписів. Якщо в майбутньому
-// парсинг "зʼїде", перевір спочатку KP_CONFIG.SHEET_TAB_PDV /
+// парсинг "зʼїде", перевір спочатку KP_CONFIG.SHEET_TAB_PDV / SHEET_TAB_CASH /
 // SHEET_TAB_MODEL (назви вкладок) і ключові слова нижче (HEADERS_*).
 // Виняток — окремі показники на вкладці "Моделювання" у parseModelSheet
 // нижче (панель "Фінансові показники"), за проханням Анни. parseBudgetCells()
 // (підсумки бюджету) теж шукає за текстом підпису, а не за координатами —
 // див. коментар над нею нижче.
+//
+// Два режими номенклатури (2026-07-18): "ПДВ" (вкладка SHEET_TAB_PDV) і
+// "C" (вкладка SHEET_TAB_CASH — внутрішньо Готівка_ФОП, без ПДВ). Обидва
+// слова "готівка"/"ФОП" навмисно НЕ показуються в інтерфейсі/документі,
+// тільки тут, у коді/конфізі — так попросила Анна.
 
 (function () {
   function extractSpreadsheetId(urlOrId) {
@@ -79,33 +84,22 @@
     return occurrence === "last" ? idxs[idxs.length - 1] : idxs[0];
   }
 
-  // ---------- Вкладка ПДВ (номенклатура, ціни, ПДВ) ----------
-  function parsePdvSheet(rows) {
+  // ---------- Спільна логіка номенклатурних вкладок (ПДВ / варіант "C") ----------
+  // Обидві вкладки мають однакову структуру категорій/рядків (заголовок
+  // категорії "1"/"2"/"3" у колонці A з назвою в B, підпозиції нижче), але
+  // РІЗНІ набори колонок з цінами — на вкладці "ПДВ" є розбивка нетто/брутто
+  // з ПДВ, на вкладці варіанту "C" (внутрішньо — Готівка_ФОП, це слово ніде
+  // не показується в інтерфейсі чи документі) ПДВ немає взагалі, ціна для
+  // клієнта лежить в інших колонках. Тому парсинг рядків/категорій винесено
+  // в спільну функцію, а вибір ПОТРІБНИХ колонок — окремо для кожної
+  // вкладки (colsFn), як і раніше — за текстом заголовка, не за координатами.
+  function parseNomenclatureSheet(rows, colsFn) {
     // Знаходимо рядок заголовків — перший рядок, що містить "найменування".
     let headerRowIdx = rows.findIndex((r) => r.some((c) => norm(c).includes("найменування")));
     if (headerRowIdx === -1) headerRowIdx = 0;
     const header = rows[headerRowIdx] || [];
-
-    const colName = findColIndex(header, ["найменування"], "first");
-    const colQty = findColIndex(header, ["к-сть"], "first");
-    // Клієнтська ціна/сума — це найправіша колонка "ціна нетто без пдв" /
-    // "сума ... нетто" / "сума ... брутто" (в цій таблиці зліва йдуть
-    // собівартість/закупівля, справа — фінальні цифри для клієнта).
-    // ВИПРАВЛЕНО (2026-07-14): раніше шукали просто "останню" колонку зі
-    // словами "ціна/сума"+"нетто"+"без пдв", у припущенні що клієнтська
-    // колонка завжди найправіша. У повній ширині вкладки (A1:AF400, а не
-    // вузького тестового діапазону) правіше за колонку "L" ще є службова
-    // колонка-дублікат "Сума закупки нетто без ПДВ" (U) — вона теж
-    // формально підпадає під ці ключові слова і, будучи правішою, підміняла
-    // собою колонку продажу, через що суми виходили $0 для КОЖНОЇ позиції.
-    // Додано "з націнкою" — фраза, що є ТІЛЬКИ в заголовках клієнтських
-    // колонок ("Ціна нетто без ПДВ за одиницю з націнкою" / "Сума продажу
-    // нетто без ПДВ з націнкою"), і більше ніде — це точно і однозначно
-    // визначає потрібну колонку незалежно від того, скільки службових
-    // колонок додано праворуч.
-    const colUnitNetto = findColIndex(header, ["ціна", "нетто", "без пдв", "з націнкою"], "last", ["прибуток"]);
-    const colLineNetto = findColIndex(header, ["сума", "нетто", "без пдв", "з націнкою"], "last", ["прибуток"]);
-    const colLineBrutto = findColIndex(header, ["сума", "брутто"], "last", ["прибуток"]);
+    const cols = colsFn(header);
+    const { colName, colQty, colUnit, colLine, colLineBrutto } = cols;
 
     const categories = [];
     let currentCat = null;
@@ -126,8 +120,8 @@
       if (!currentCat) continue;
 
       const qty = numeric(row[colQty]);
-      const unit = colUnitNetto >= 0 ? numeric(row[colUnitNetto]) : null;
-      const lineNetto = colLineNetto >= 0 ? numeric(row[colLineNetto]) : null;
+      const unit = colUnit >= 0 ? numeric(row[colUnit]) : null;
+      const lineNetto = colLine >= 0 ? numeric(row[colLine]) : null;
       const lineBrutto = colLineBrutto >= 0 ? numeric(row[colLineBrutto]) : null;
 
       if (!name) continue; // порожні рядки-заглушки пропускаємо
@@ -155,6 +149,53 @@
       (s, c) => s + c.items.reduce((s2, it) => s2 + it.lineNetto, 0), 0
     );
     return { categories, nettoTotal };
+  }
+
+  // ---------- Вкладка ПДВ (номенклатура, ціни, ПДВ) ----------
+  function parsePdvSheet(rows) {
+    return parseNomenclatureSheet(rows, (header) => {
+      // Клієнтська ціна/сума — це найправіша колонка "ціна нетто без пдв" /
+      // "сума ... нетто" / "сума ... брутто" (в цій таблиці зліва йдуть
+      // собівартість/закупівля, справа — фінальні цифри для клієнта).
+      // ВИПРАВЛЕНО (2026-07-14): раніше шукали просто "останню" колонку зі
+      // словами "ціна/сума"+"нетто"+"без пдв", у припущенні що клієнтська
+      // колонка завжди найправіша. У повній ширині вкладки (A1:AF400, а не
+      // вузького тестового діапазону) правіше за колонку "L" ще є службова
+      // колонка-дублікат "Сума закупки нетто без ПДВ" (U) — вона теж
+      // формально підпадає під ці ключові слова і, будучи правішою, підміняла
+      // собою колонку продажу, через що суми виходили $0 для КОЖНОЇ позиції.
+      // Додано "з націнкою" — фраза, що є ТІЛЬКИ в заголовках клієнтських
+      // колонок ("Ціна нетто без ПДВ за одиницю з націнкою" / "Сума продажу
+      // нетто без ПДВ з націнкою"), і більше ніде — це точно і однозначно
+      // визначає потрібну колонку незалежно від того, скільки службових
+      // колонок додано праворуч.
+      return {
+        colName: findColIndex(header, ["найменування"], "first"),
+        colQty: findColIndex(header, ["к-сть"], "first"),
+        colUnit: findColIndex(header, ["ціна", "нетто", "без пдв", "з націнкою"], "last", ["прибуток"]),
+        colLine: findColIndex(header, ["сума", "нетто", "без пдв", "з націнкою"], "last", ["прибуток"]),
+        colLineBrutto: findColIndex(header, ["сума", "брутто"], "last", ["прибуток"]),
+      };
+    });
+  }
+
+  // ---------- Вкладка варіанту "C" (внутрішньо Готівка_ФОП — без ПДВ) ----------
+  // Додано за проханням Анни (2026-07-18): для приватних клієнтів іноді
+  // потрібен розрахунок без ПДВ. Структура колонок тут ІНША, ніж на "ПДВ":
+  // немає розбивки нетто/брутто з ПДВ узагалі — ціна для клієнта одразу
+  // "чиста" (закупка + націнка, без податку). Заголовок клієнтської
+  // колонки — "Ціна за одиницю для клієнта з нашою націнкою $" /
+  // "Сума для клієнта з нашою націнкою $" (і поруч — той самий підпис,
+  // але в грн., яку явно виключаємо, інакше findColIndex міг би підхопити
+  // її замість доларової).
+  function parseCashSheet(rows) {
+    return parseNomenclatureSheet(rows, (header) => ({
+      colName: findColIndex(header, ["найменування"], "first"),
+      colQty: findColIndex(header, ["к-сть"], "first"),
+      colUnit: findColIndex(header, ["ціна", "клієнта"], "first", ["закупки", "прибуток"]),
+      colLine: findColIndex(header, ["сума", "клієнта"], "first", ["грн", "закупки", "прибуток"]),
+      colLineBrutto: -1, // на цій вкладці немає поняття "брутто з ПДВ"
+    }));
   }
 
   // ---------- Бюджет реалізації (сторінка "03 Бюджет реалізації") ----------
@@ -238,7 +279,14 @@
   // діапазон до списку, що показується в таблиці. Тут — ті самі позиції
   // (за реальним номером рядка, не за індексом масиву) враховуються і в
   // ціну групи "Обладнання", щоб сума завжди відповідала показаним рядкам.
-  function parseBudgetCells(pdv, rows) {
+  function parseBudgetCells(pdv, rows, opts) {
+    opts = opts || {};
+    // Колонка з підсумком категорії "Обладнання" в рядку 2 файлу: на
+    // вкладці "ПДВ" це L (11) — "Сума продажу нетто без ПДВ з націнкою";
+    // на вкладці варіанту "C" (без ПДВ) немає такої колонки, там клієнтська
+    // сума лежить у I (8) — "Сума для клієнта з нашою націнкою $". Викликач
+    // (loadCalcFromSheet) передає правильний індекс через opts.totalColIdx.
+    const totalColIdx = opts.totalColIdx != null ? opts.totalColIdx : 11;
     const range = (window.KP_CONFIG && window.KP_CONFIG.BUDGET_EQUIP_ROW_RANGE) || { start: 3, end: 10 };
     const equipIdx = findEquipCategoryIndex(pdv.categories);
     const equipCat = equipIdx >= 0 ? pdv.categories[equipIdx] : null;
@@ -260,11 +308,20 @@
     // parseModelSheet) — запасний варіант (сума показаних позицій)
     // лишається, якщо в конкретному файлі рядок 2/стовпець L порожній
     // чи не число.
-    const equipmentCostFromFile = numeric(rows[1] && rows[1][11]);
+    const equipmentCostFromFile = numeric(rows[1] && rows[1][totalColIdx]);
     const equipmentCost = equipmentCostFromFile != null ? equipmentCostFromFile : sumLineNetto(equipItems);
     const materialsCost = sumLineNetto(materialsCat && materialsCat.items);
     const worksCost = sumLineNetto(worksCat && worksCat.items);
     const groupsSum = equipmentCost + materialsCost + worksCost;
+
+    // Варіант "C" (без ПДВ, opts.noVat) — на цій вкладці немає ані ставки
+    // ПДВ, ані окремих підписів "Бюджет ... з ПДВ" узагалі, тому не шукаємо
+    // їх (findLabeledUsdValue все одно нічого б не знайшов, але явний
+    // прапорець надійніший за випадковий збіг тексту) — просто сума трьох
+    // груп, без податкового рядка (запит Анни, 2026-07-18).
+    if (opts.noVat) {
+      return { equipmentCost, materialsCost, worksCost, nettoTotal: groupsSum, grossTotal: groupsSum, vat: 0 };
+    }
 
     const vatPercent = findVatPercent(rows);
     const vatRate = vatPercent != null ? vatPercent / 100 : 0.2; // 0.2 = дефолт 20%, якщо не знайдено в файлі
@@ -368,21 +425,31 @@
     };
   }
 
-  async function loadCalcFromSheet(sheetUrlOrId) {
+  // mode: "pdv" (за замовчуванням) — вкладка KP_CONFIG.SHEET_TAB_PDV,
+  // повна логіка з ПДВ; "cash" — вкладка KP_CONFIG.SHEET_TAB_CASH (у формі
+  // на сайті показується просто як варіант "C", без слів
+  // "готівка"/"ФОП" — так попросила Анна, 2026-07-18), без податкового рядка.
+  async function loadCalcFromSheet(sheetUrlOrId, mode) {
+    mode = mode === "cash" ? "cash" : "pdv";
     const id = extractSpreadsheetId(sheetUrlOrId);
+    const tabName = mode === "cash" ? window.KP_CONFIG.SHEET_TAB_CASH : window.KP_CONFIG.SHEET_TAB_PDV;
     const [pdvRows, modelRows] = await Promise.all([
-      fetchSheetValues(id, window.KP_CONFIG.SHEET_TAB_PDV),
+      fetchSheetValues(id, tabName),
       fetchSheetValues(id, window.KP_CONFIG.SHEET_TAB_MODEL),
     ]);
-    const pdv = parsePdvSheet(pdvRows);
+    const pdv = mode === "cash" ? parseCashSheet(pdvRows) : parsePdvSheet(pdvRows);
+    const budgetOpts = mode === "cash" ? { totalColIdx: 8, noVat: true } : { totalColIdx: 11 };
     return {
       pdv,
       model: parseModelSheet(modelRows),
-      budget: parseBudgetCells(pdv, pdvRows),
+      budget: parseBudgetCells(pdv, pdvRows, budgetOpts),
     };
   }
 
-  window.KpSheets = { loadCalcFromSheet, extractSpreadsheetId, parsePdvSheet, parseModelSheet, parseBudgetCells };
+  window.KpSheets = {
+    loadCalcFromSheet, extractSpreadsheetId,
+    parsePdvSheet, parseCashSheet, parseModelSheet, parseBudgetCells,
+  };
 })();
 
 // Окремо: назва файлу в Google Sheets. Раніше використовувалась як
