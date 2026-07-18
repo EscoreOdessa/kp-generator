@@ -434,11 +434,21 @@
     // податку, ані слово "ПДВ" в підписах підсумку/шапки таблиці взагалі.
     const noVat = m.clientMode === "cash";
     const priceHeader = noVat ? "Вартість, $" : "Вартість<br/>без ПДВ, $";
+    // Підписи підсумків (запит Анни, 2026-07-19): раніше `colspan="3"`
+    // об'єднував і мержовану колонку категорії (де, наприклад, і так уже
+    // стоїть вертикальна назва останнього підрозділу над цим рядком), тому
+    // текст-центрувався по всій ширині трьох колонок — виглядало як
+    // "у повітрі", не під колонкою назв. Тепер — окрема порожня `<td>` для
+    // колонки категорії (та сама ширина, що й у решти рядків, просто без
+    // тексту — рядок підсумку сам собою не належить жодному підрозділу) +
+    // `colspan="2"` лише на назву/кількість з `text-align:left` (клас
+    // "sum-label", див. style.css) — тепер підпис починається точно під
+    // колонкою "Найменування", як і просила Анна.
     const totalsHtml = noVat
-      ? `<tr class="sum grand"><td colspan="3">Загальна вартість:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>`
-      : `<tr class="sum"><td colspan="3">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
-            <tr class="sum"><td colspan="3">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
-            <tr class="sum grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
+      ? `<tr class="sum grand"><td></td><td colspan="2" class="sum-label">Загальна вартість:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>`
+      : `<tr class="sum"><td></td><td colspan="2" class="sum-label">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
+            <tr class="sum"><td></td><td colspan="2" class="sum-label">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
+            <tr class="sum grand"><td></td><td colspan="2" class="sum-label">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
 
     const sub = budgetDetailSubsections(m);
     const equipHtml = budgetGroupRows(equipRows, (it) => it.name, (it) => it.qty, b.equipmentCost, "Обладнання", "grp-equip");
@@ -463,16 +473,18 @@
     // Роботи перенесено з 1-ї сторінки на кінець, ПІСЛЯ кабельної групи
     // (раніше стояли одразу після DC, щоб влізти на 1-шу сторінку — тепер
     // порядок логічний, а розміщення по сторінках вирішується окремо,
-    // нижче). separator:true на DC і Роботи — товща лінія-розділювач
-    // (клас "grp-sep", див. budgetGroupRows) між підрозділами ОДНАКОВОГО
-    // кольору фону (АС/DC — обидва grp-mat), де без цього межа губилась;
-    // Кабельна продукція навмисно БЕЗ separator — вона завжди перша в
-    // tbody своєї сторінки (одразу під шапкою таблиці), там лінія була б
-    // зайвою.
-    const acHtml = budgetGroupRows(sub[0].items && sub[0].items.length ? sub[0].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[0].price, sub[0].label, "grp-mat");
+    // нижче). ОНОВЛЕНО (той самий день, друге прохання Анни): separator
+    // (клас "grp-sep", товща лінія — див. budgetGroupRows/style.css) тепер
+    // стоїть МІЖ УСІМА підрозділами — АС (після Обладнання), DC (після АС),
+    // Роботи (після Кабельної продукції) — а не лише між АС/DC, як було
+    // спочатку. Виняток лишається той самий: Обладнання й Кабельна
+    // продукція НЕ отримують separator, бо вони завжди перші рядки tbody
+    // своєї сторінки (одразу під шапкою таблиці) — лінія одразу під шапкою
+    // виглядала б зайвою/задвоєною.
+    const acHtml = budgetGroupRows(sub[0].items && sub[0].items.length ? sub[0].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[0].price, sub[0].label, "grp-mat", { separator: true });
     const dcHtml = budgetGroupRows(sub[1].items && sub[1].items.length ? sub[1].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[1].price, sub[1].label, "grp-mat", { separator: true });
     const cableHtml = budgetGroupRows(sub[2].items && sub[2].items.length ? sub[2].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[2].price, sub[2].label, "grp-mat");
-    const worksHtmlOrdered = budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works");
+    const worksHtmlOrdered = budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works", { separator: true });
 
     // Розбиття на сторінки (перероблено 2026-07-19 разом зі зміною порядку
     // й проханням Анни лишити примітки праворуч від таблиці, а не окремим
