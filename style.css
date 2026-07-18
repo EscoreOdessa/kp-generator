@@ -81,6 +81,25 @@ body{
   background: var(--tint);
   font-weight:600;
 }
+/* "Розширений бюджет" — окремий чекбокс (2026-07-18), той самий
+   картковий стиль, що й .mode-opt, але для одного toggle-поля. */
+.field label.checkbox-field{
+  display:flex; align-items:center; gap:9px;
+  padding:8px 16px;
+  border:1px solid #D3D9D5;
+  border-radius:8px;
+  font-size:14px; font-weight:500;
+  color: var(--ink-2);
+  cursor:pointer; user-select:none;
+  margin-bottom:0;
+  width:fit-content;
+}
+.field label.checkbox-field:has(input:checked){
+  border-color: var(--green);
+  background: var(--tint);
+  font-weight:600;
+}
+.field label.checkbox-field input{ margin:0; accent-color: var(--green); width:16px; height:16px; }
 .row2{ display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .row3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .dropzone{
@@ -408,6 +427,23 @@ table.budget-table .budget-cat span{
   font-weight:800;
   font-size:13px;
   letter-spacing:.03em;
+}
+/* Довгі підписи підрозділів "Розширеного бюджету" (2026-07-18, напр.
+   "Автоматика захисту фотоелектричних модулів (постійний струм)") не
+   влазять в один рядок повернутого тексту, як короткі "Обладнання"/
+   "Роботи" — .long вмикає менший шрифт і перенос рядків (в межах
+   pre-rotation width, який після rotate(-90deg) стає доступною висотою).
+   html2canvas НЕ підтримує writing-mode (див. коментар вище над
+   .budget-cat), тому тримаємось того самого rotate+absolute підходу, а не
+   переписуємо на writing-mode. */
+table.budget-table .budget-cat.long{ width:56px; min-width:56px; }
+table.budget-table .budget-cat.long span{
+  font-size:8px;
+  line-height:1.2;
+  white-space: normal;
+  width: 140px;
+  text-align:center;
+  letter-spacing:0;
 }
 table.budget-table .budget-price span{
   transform: translate(-50%, -50%);
