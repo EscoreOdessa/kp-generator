@@ -673,6 +673,103 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
   padding: 12px 20px;
 }
 .logo-tile img{ max-width:100%; max-height:100%; object-fit:contain; }
+
+/* ---------- "Документ" (запит Анни, 2026-07-19) — другий формат виводу,
+   компактний портретний текст+таблиці замість "слайдів" (.kp-page вище).
+   На екрані — ОДИН безперервний "аркуш" (на відміну від .kp-page, тут
+   НЕМАЄ фіксованої висоти/overflow:hidden — контент природно
+   переливається, розриви сторінок задає лише @page/page-break-* нижче,
+   застосовується тільки при друку). Друкується window.print() (app.js),
+   НЕ html2canvas+jsPDF — див. коментар у index.html і план у пам'яті
+   kp_generator_document_mode_plan. ---------- */
+.doc-root{
+  width: 780px;
+  margin: 24px auto;
+  background: var(--white);
+  padding: 48px 56px 60px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.doc-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  border-bottom: 3px solid var(--green);
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+}
+.doc-header img.logo{ height: 30px; }
+.doc-company{ font-size:12.5px; color:var(--text-muted); margin-top:6px; }
+.doc-meta{ text-align:right; font-size:12.5px; color: var(--text-muted); line-height:1.5; }
+.doc-meta strong{ color:var(--ink); font-size:14px; letter-spacing:.03em; }
+.doc-title{ font-size:19px; font-weight:800; color:var(--ink); margin:0 0 22px; }
+.doc-section{ margin: 0 0 26px; }
+.doc-section h2{
+  font-size:14px;
+  font-weight:800;
+  color:#fff;
+  background: var(--green);
+  padding:8px 14px;
+  border-radius:6px;
+  margin:0 0 12px;
+}
+.doc-preamble p{ margin:0 0 10px; }
+.doc-preamble p:last-child{ margin-bottom:0; }
+table.doc-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+table.doc-table th{
+  background: var(--tint);
+  color:var(--ink);
+  text-align:left;
+  padding:7px 10px;
+  font-weight:700;
+  border-bottom:2px solid var(--green);
+}
+table.doc-table th.num{ text-align:right; }
+table.doc-table td{
+  padding:6px 10px;
+  border-bottom:1px solid var(--line);
+}
+table.doc-table td.num{ text-align:right; white-space:nowrap; }
+table.doc-table tr{ page-break-inside: avoid; }
+table.doc-table tbody tr:last-child td{ border-bottom:none; }
+/* Заголовок розділу бюджету (Обладнання/АС/DC/Кабельна продукція/Роботи) —
+   виділений рядок над своїми позиціями замість повернутого на 90° підпису,
+   що використовується на слайді — тут немає обмеження ширини сторінки,
+   тому це просто звичайний рядок-заголовок. */
+table.doc-table tr.doc-cat-row td{
+  background: var(--tint-2);
+  font-weight:700;
+  color:var(--green-dark);
+  border-bottom:1px solid var(--line);
+}
+table.doc-table.doc-kv td:first-child{ color:var(--text-muted); }
+table.doc-table.doc-kv td.num{ font-weight:700; color:var(--ink); }
+table.doc-table tfoot td{
+  font-weight:800;
+  border-top:2px solid var(--green);
+  border-bottom:none;
+  padding-top:8px;
+}
+table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
+.doc-img-wrap{ text-align:center; margin:4px 0 0; }
+.doc-img-wrap img{ max-width:100%; border-radius:8px; }
+.doc-img-wrap .cap{ font-size:12px; color:var(--text-muted); margin-top:8px; }
+.doc-manager{
+  margin-top:12px;
+  padding-top:16px;
+  border-top:1px solid var(--line);
+  font-size:13px;
+  color:var(--text-muted);
+  line-height:1.7;
+}
+.doc-manager b{ color:var(--ink); }
+
 @media print{
   *{
     -webkit-print-color-adjust: exact !important;
@@ -689,5 +786,19 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
     page-break-after: always;
   }
   .kp-page:last-child{ page-break-after: auto; }
+  /* Документ друкується на ОКРЕМІЙ іменованій сторінці @page doc-page
+     (портрет, з полями) — на відміну від дефолтної @page нижче (альбомна,
+     без полів, призначена для html2canvas-скріншотів "слайдів"). Властивість
+     "page" успадковується нащадками .doc-root, тож досить встановити її раз
+     на корені. */
+  .doc-root{
+    box-shadow:none;
+    margin:0;
+    width:auto;
+    padding:0;
+    page: doc-page;
+  }
+  table.doc-table thead{ display: table-header-group; }
 }
 @page{ size: A4 landscape; margin: 0; }
+@page doc-page{ size: A4 portrait; margin: 16mm 15mm; }
