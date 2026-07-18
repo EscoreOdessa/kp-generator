@@ -21,11 +21,20 @@
         throw new Error("Вкажіть посилання на Google Sheet з розрахунком.");
       }
 
+      // Тип розрахунку — тумблер "ПДВ" / "C" на формі (запит Анни,
+      // 2026-07-18). Внутрішньо "C" відповідає вкладці KP_CONFIG.SHEET_TAB_CASH
+      // (Готівка_ФОП, без ПДВ) — але саму назву вкладки й слова
+      // "готівка"/"ФОП" ніде користувачу не показуємо, навіть у повідомленнях
+      // про помилку нижче.
+      const modeInput = document.querySelector('input[name="in-mode"]:checked');
+      const mode = modeInput ? modeInput.value : "pdv";
+
       setStatus("Читаємо Google Sheet...");
-      const data = await KpSheets.loadCalcFromSheet(sheetUrl);
+      const data = await KpSheets.loadCalcFromSheet(sheetUrl, mode);
       const pdv = data.pdv, modelData = data.model;
       if (!pdv.categories.length) {
-        throw new Error('У вкладці "' + KP_CONFIG.SHEET_TAB_PDV + '" не знайдено жодного рядка з даними. Перевір назву вкладки й формат таблиці.');
+        const modeLabel = mode === "cash" ? "C" : "ПДВ";
+        throw new Error('У вкладці варіанту "' + modeLabel + '" не знайдено жодного рядка з даними. Перевір файл-розрахунок.');
       }
 
       // Зображення розкладки/візуалізації
@@ -110,6 +119,7 @@
         budget: data.budget,
         pvsystImage,
         seasonalHourly,
+        clientMode: mode,
       };
 
       KpRender.render(model);
