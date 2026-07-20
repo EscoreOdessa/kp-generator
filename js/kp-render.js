@@ -956,16 +956,25 @@
     model.meta.company = window.KP_CONFIG.COMPANY;
     model.tech = buildTechSpec(model.pdv);
 
+    // "Розділи КП" (запит Анни, 2026-07-20) — 4 чекбокси на формі
+    // (index.html #in-sec-*), передаються через app.js як model.sections.
+    // Наразі діють ЛИШЕ тут, у форматі "Документ" — presentation-версія
+    // (render() нижче) навмисно НЕ чіпається, за домовленістю з Анною
+    // ("давай поки для Документа, з Презентацією подивимось пізніше").
+    // Фолбек на всі true — про всяк випадок, якщо колись щось викличе
+    // renderDocument() без цього поля (напр. старий кеш app.js).
+    const sections = model.sections || { tech: true, finance: true, budget: true, warranty: true };
+
     const html = `
     <div class="doc-root">
       ${docHeader(model)}
       ${docTitle(model)}
-      ${docSection("Технічне рішення", docPreamble(model), { avoidBreak: true })}
-      ${docSection("Технічні характеристики", docTechTable(model), { avoidBreak: true })}
-      ${docSection("Фінансові показники", docFinTable(model), { avoidBreak: true })}
-      ${docSection("Бюджет реалізації", docBudgetTable(model))}
+      ${docSection("Технічне рішення", sections.tech ? docPreamble(model) : "", { avoidBreak: true })}
+      ${docSection("Технічні характеристики", sections.tech ? docTechTable(model) : "", { avoidBreak: true })}
+      ${docSection("Фінансові показники", sections.finance ? docFinTable(model) : "", { avoidBreak: true })}
+      ${docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model) : "")}
       ${docSection("Імітаційна модель СЕС", docPvsystBlock(model), { avoidBreak: true })}
-      ${docSection("Гарантійний термін та термін використання", warrantyTableHtml(), { avoidBreak: true })}
+      ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
       ${docManagerBlock()}
     </div>`;
 
