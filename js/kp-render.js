@@ -694,8 +694,20 @@
   function buildTechSpec(pdv) {
     const specItems = [];
     let panelModel = null, panelsQty = 0, inverterModel = null, invertersQty = 0;
-    let batteryModel = null, batteryQty = 0;
-    let isHybrid = false, hasBattery = false, inverterKwTotal = 0;
+    let isHybrid = false, inverterKwTotal = 0;
+    // batteryMatches (запит Анни, 2026-07-20, другий баг того ж дня): усі
+    // позиції, назва яких згадує акумулятор/АКБ/батарею, збираються сюди
+    // замість того, щоб одразу перезаписувати batteryModel/сумувати
+    // batteryQty по ходу циклу (як було раніше). Причина: розширення
+    // регулярки для акб трохи вище (той самий день, попередній фікс) почало
+    // заодно ловити аксесуари, які лише ЗГАДУЮТЬ АКБ у дужках — напр. "Шафа
+    // 3U-H-RACK (12 АКБ)" (стійка ПІД акумулятори, сама акумулятором не є) —
+    // і якщо такий рядок траплявся в Кошторисі ПІСЛЯ реальної позиції "АКБ
+    // Deye BOS-G PRO...", він мовчки перезаписував і назву, і сумарну
+    // кількість (стара логіка додавала qty кожного збігу до однієї
+    // спільної суми) — картка "Акумулятор" показувала назву й кількість
+    // шафи замість самого акумулятора. Див. sectionHasData нижче.
+    const batteryMatches = [];
     pdv.categories.forEach((cat) => {
       cat.items.forEach((it) => {
         const n = it.name.toLowerCase();
@@ -719,12 +731,32 @@
         // Фікс: (?<![а-яіїєґ])...(?![а-яіїєґ]) — власна, кирилично-свідома
         // межа слова замість \b. Також додано корінь "батаре" (батарея) —
         // ще одне поширене позначення, яке раніше взагалі не розпізнавалось.
-        if (/акумулятор|батаре|(?<![а-яіїєґ])акб(?![а-яіїєґ])|batter/.test(n)) { hasBattery = true; batteryModel = it.name; batteryQty += it.qty; }
+        if (/акумулятор|батаре|(?<![а-яіїєґ])акб(?![а-яіїєґ])|batter/.test(n)) {
+          // isPrimary — назва позиції ПОЧИНАЄТЬСЯ з ключового слова (сам
+          // акумулятор є "головним" предметом рядка), на відміну від
+          // аксесуара, де слово лише десь ЗГАДУЄТЬСЯ в описі (типовий
+          // приклад — "Шафа 3U-H-RACK (12 АКБ)", починається з "шафа").
+          const isPrimary = /^(акумулятор|батаре|акб|batter)/.test(n);
+          batteryMatches.push({ name: it.name, qty: it.qty, isPrimary });
+        }
         if (it.qty > 0) {
           specItems.push({ label: it.name, value: `${it.qty} шт` });
         }
       });
     });
+    const hasBattery = batteryMatches.length > 0;
+    let batteryModel = null, batteryQty = 0;
+    if (hasBattery) {
+      // Пріоритет — перший "первинний" збіг (isPrimary); якщо жодного
+      // немає (усі знайдені рядки — лише згадки в описі аксесуарів),
+      // повертаємось до старої поведінки — перший будь-який збіг. Кількість
+      // і назва беруться ЛИШЕ з цього одного обраного рядка — більше НЕ
+      // сумуються по всіх збігах одразу (сума "аксесуар + сам акумулятор"
+      // не мала жодного сенсу — саме це й спричиняло баг вище).
+      const chosen = batteryMatches.find((m) => m.isPrimary) || batteryMatches[0];
+      batteryModel = chosen.name;
+      batteryQty = chosen.qty;
+    }
     const hybrid = isHybrid || hasBattery;
     const stationType = hybrid ? "гібридна" : "мережева";
     const stationTypeGen = hybrid ? "гібридної" : "мережевої";
