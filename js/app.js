@@ -11,6 +11,72 @@
     el.classList.toggle("error", !!isError);
   }
 
+  // "Розділи КП" (запит Анни, 2026-07-20) — 4 чекбокси на формі
+  // (index.html #in-sec-*), наразі впливають ЛИШЕ на формат "Документ"
+  // (kp-render.js renderDocument() читає model.sections; формат
+  // "Презентація" поки не чіпаємо — домовленість "потім подивимось").
+  //
+  // "Розумний дефолт": якщо менеджер конкретний чекбокс жодного разу не
+  // чіпав руками (немає data-touched, виставляється у wireSectionCheckboxes()
+  // нижче), app.js сам знімає з нього позначку в момент генерації, коли у
+  // щойно завантаженому файлі-розрахунку немає відповідних даних — напр.
+  // "Фінансові показники", коли клієнту рахували лише обладнання без
+  // тарифу/моделі (усі 5 полів вкладки "Моделювання" порожні). Будь-який
+  // чекбокс, який менеджер сам поставив/зняв, "розумний дефолт" більше НЕ
+  // чіпає при наступних генераціях у цій самій сесії форми.
+  const SECTION_CHECKBOX_IDS = {
+    tech: "in-sec-tech",
+    finance: "in-sec-finance",
+    budget: "in-sec-budget",
+    warranty: "in-sec-warranty",
+  };
+
+  function wireSectionCheckboxes() {
+    Object.values(SECTION_CHECKBOX_IDS).forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("change", () => { el.dataset.touched = "1"; });
+    });
+  }
+
+  // Сигнал "чи є дані для цього розділу" — рахується з уже завантаженого
+  // data (result of KpSheets.loadCalcFromSheet), ДО побудови m.tech
+  // (buildTechSpec рахується всередині kp-render.js, тут для "tech" досить
+  // грубішого сигналу — чи взагалі є хоч якась номенклатура на вкладці).
+  function sectionHasData(key, data) {
+    const modelData = data.model || {};
+    const budget = data.budget || {};
+    if (key === "tech") {
+      return !!(data.pdv && data.pdv.categories && data.pdv.categories.length);
+    }
+    if (key === "finance") {
+      return modelData.annualSavings100 != null || modelData.paybackAtTariff != null ||
+        modelData.totalEffect30y != null || modelData.lcoe30Uah != null ||
+        !!(modelData.monthlySavings && modelData.monthlySavings.length);
+    }
+    if (key === "budget") {
+      return !!(budget.nettoTotal || budget.grossTotal || budget.equipmentCost);
+    }
+    // "warranty" — статична таблиця, не залежить від файлу-розрахунку:
+    // сигналу "нема даних" тут просто не існує, тож розумний дефолт завжди
+    // лишає розділ увімкненим (менеджер все одно може зняти позначку
+    // вручну, якщо для конкретної угоди гарантія не потрібна).
+    return true;
+  }
+
+  function resolveSections(data) {
+    const sections = {};
+    Object.keys(SECTION_CHECKBOX_IDS).forEach((key) => {
+      const el = document.getElementById(SECTION_CHECKBOX_IDS[key]);
+      if (!el) { sections[key] = true; return; }
+      if (el.dataset.touched !== "1") {
+        el.checked = sectionHasData(key, data);
+      }
+      sections[key] = el.checked;
+    });
+    return sections;
+  }
+
   async function handleGenerate() {
     const btn = document.getElementById("btn-generate");
     btn.disabled = true;
@@ -54,6 +120,12 @@
         const modeLabel = mode === "cash" ? "C" : "ПДВ";
         throw new Error('У вкладці варіанту "' + modeLabel + '" не знайдено жодного рядка з даними. Перевір файл-розрахунок.');
       }
+
+      // "Розділи КП" — розв'язуємо фінальний стан 4 чекбоксів (з урахуванням
+      // "розумного дефолту" для нечіпаних вручну) ЗАРАЗ, одразу після
+      // завантаження даних, — щоб і сам чекбокс на екрані показав те, що
+      // реально піде в документ, а не лишався розсинхронізованим.
+      const sections = resolveSections(data);
 
       // Зображення розкладки/візуалізації
       const imgFiles = document.getElementById("in-images").files;
@@ -141,6 +213,7 @@
         pvsystImage,
         seasonalHourly,
         clientMode: mode,
+        sections,
       };
 
       const docHolder = document.getElementById("kp-doc");
@@ -325,6 +398,7 @@
   ready(() => {
     document.getElementById("btn-generate").addEventListener("click", handleGenerate);
     document.getElementById("btn-print").addEventListener("click", handleSavePdf);
+    wireSectionCheckboxes();
 
     document.getElementById("in-images").addEventListener("change", async (e) => {
       const list = document.getElementById("img-thumbs");
