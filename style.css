@@ -439,8 +439,8 @@ table.budget-table .budget-cat span{
   transform: translate(-50%, -50%) rotate(-90deg);
   display:inline-block;
   font-weight:800;
-  font-size:13px;
-  letter-spacing:.03em;
+  font-size:10px;
+  letter-spacing:0;
 }
 /* Довгі підписи підрозділів "Розширеного бюджету" (2026-07-18, напр.
    "Автоматика захисту фотоелектричних модулів (постійний струм)") не
@@ -597,7 +597,7 @@ table.warranty-table td[contenteditable]:hover{ background: var(--tint); }
 table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); outline-offset:-2px; background: var(--tint-2); }
 .manager-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .manager-page .logo{ height:26px; display:block; margin-bottom:40px; align-self:flex-start; }
-.manager-body{ display:flex; gap:100px; align-items:center; flex:1; min-height:0; max-width:1030px; margin:0 auto; width:100%; }
+.manager-body{ display:flex; gap:100px; align-items:flex-start; flex:1; min-height:0; max-width:1030px; margin:0 auto; width:100%; }
 .manager-photo-col{ flex: 0 0 400px; }
 .manager-photo{
   width:100%;
@@ -609,8 +609,9 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
 .manager-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
 .manager-name{ font-size:27px; font-weight:800; color:var(--green-dark); margin-top:18px; }
 .manager-role{ font-size:19px; color:var(--text-muted); font-weight:600; margin-top:4px; }
-.manager-contacts{ flex:1; padding-top: 20px; display:flex; flex-direction:column; gap:42px; justify-content:center; }
+.manager-contacts{ flex:1; padding-top: 0; display:flex; flex-direction:column; gap:150.8px; justify-content:flex-start; }
 .manager-contacts .mc-row{ display:flex; gap:64px; }
+.manager-contacts .mc-row > .mc-block:last-child{ margin-left:auto; }
 .manager-contacts .mc-title{ font-size:23px; font-weight:800; color:var(--green-dark); margin-bottom:9px; }
 .manager-contacts .mc-val{ font-size:23px; color:var(--ink); line-height:1.5; }
 .manager-contacts .mc-val a{ color:var(--ink); text-decoration: underline; }
