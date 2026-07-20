@@ -708,7 +708,18 @@
           const kwMatch = it.name.match(/(\d+(?:[.,]\d+)?)\s*k(?!wh)/i);
           if (kwMatch) inverterKwTotal += parseFloat(kwMatch[1].replace(",", ".")) * (it.qty || 1);
         }
-        if (/акумулятор|акб\b|batter/.test(n)) { hasBattery = true; batteryModel = it.name; batteryQty += it.qty; }
+        // Було: /акумулятор|акб\b|batter/ — \b (межа слова) у JS визначається
+        // лише через ASCII-літери ([A-Za-z0-9_]), тому вона НІКОЛИ не
+        // спрацьовує навколо кириличного тексту: "акб" в кінці рядка/перед
+        // пробілом не вважається "межею", і ця альтернатива мовчки ніколи не
+        // матчилась. Якщо позиція в Кошторисі названа просто "АКБ ..." (без
+        // слова "акумулятор"), станція розпізнавалась як мережева, хоча
+        // акумулятор фактично був — саме цей баг помітила Анна 2026-07-20
+        // ("Тип станції" показав "мережева" при гібридному інверторі + АКБ).
+        // Фікс: (?<![а-яіїєґ])...(?![а-яіїєґ]) — власна, кирилично-свідома
+        // межа слова замість \b. Також додано корінь "батаре" (батарея) —
+        // ще одне поширене позначення, яке раніше взагалі не розпізнавалось.
+        if (/акумулятор|батаре|(?<![а-яіїєґ])акб(?![а-яіїєґ])|batter/.test(n)) { hasBattery = true; batteryModel = it.name; batteryQty += it.qty; }
         if (it.qty > 0) {
           specItems.push({ label: it.name, value: `${it.qty} шт` });
         }
@@ -844,8 +855,18 @@
   }
 
   function docTechTable(m) {
+    // Було: `m.tech.hasBattery ? "гібридна" : "мережева"` — окремий,
+    // локальний перерахунок типу станції, що ігнорував isHybrid (ознаку
+    // "гібридний" у НАЗВІ інвертора, buildTechSpec) і не використовував уже
+    // готове m.tech.stationType (яке коректно об'єднує isHybrid || hasBattery,
+    // buildTechSpec вище). Через це ця сторінка могла розійтись з рештою
+    // документа (hero/обкладинка/преамбула — усі беруть m.tech.stationType) —
+    // напр. якщо назва інвертора містить "гібрид", а окрема позиція АКБ з
+    // якоїсь причини не розпізналась, тут все одно вийшла б "мережева", хоча
+    // на інших сторінках уже стояло "гібридна". Фікс: одне джерело істини —
+    // m.tech.stationType, як і скрізь інде в цьому файлі.
     return docKvTable([
-      ["Тип станції", m.tech.hasBattery ? "гібридна" : "мережева"],
+      ["Тип станції", m.tech.stationType],
       ["Потужність інверторної групи", m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : null],
       ["Інвертор", m.tech.inverterModel ? esc(m.tech.inverterModel) + (m.tech.invertersQty ? ` — ${m.tech.invertersQty} шт` : "") : null],
       ["Сонячні панелі", m.tech.panelModel ? esc(stripEquipPrefix(m.tech.panelModel)) + (m.tech.panelsQty ? ` — ${m.tech.panelsQty} шт` : "") : null],
