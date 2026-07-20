@@ -20,16 +20,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <!-- html2canvas + jsPDF — рендер КП у PDF "як є" на екрані (запит Анни,
      2026-07-13, після двох невдалих спроб полагодити нативний друк
-     браузера: перша сторінка друкувалась порожньою, а сторінки з
-     CSS Grid/довгими таблицями "перетікали" на сирітські сторінки без
-     заголовка — @media print у різних браузерах поводиться непередбачувано
-     і чіпляти баг за багом було ненадійно). Кожна .kp-page рендериться
-     html2canvas() у картинку ТОЧНО як показано на екрані (жодних правил
-     @media print не задіяно), і картинки вставляються в PDF одна на
-     сторінку через jsPDF — це гарантує, що PDF завжди виглядає так само,
-     як прев'ю на екрані, незалежно від того, як конкретний браузер друкує
-     CSS. Кнопка "Друк / зберегти як PDF" тепер викликає це замість
-     window.print() (див. js/app.js, handleSavePdf()). -->
+     браузера: перша сторінка друкувалась суцільно білою (position:absolute-елементи не дають .kp-page висоти, коли
+     @media print скидає min-height у auto — сторінка "схлопується" в 0),
+     а сторінка "Бюджет реалізації" (використовує display:grid для
+     колонки таблиці + колонки приміток) "перетікала" на сирітську
+     сторінку без заголовка, бо Chrome під час друку часто не вміє
+     розбивати grid-контейнери по межі сторінки — переносить їх цілком.
+     Замість того щоб ганятись за кожним новим сюрпризом @media print
+     окремо, кожна .kp-page тепер рендериться html2canvas() у картинку
+     ТОЧНО як показано на екрані (жодні правила друку не задіяні), і
+     картинки вставляються в PDF одна на сторінку через jsPDF — це
+     гарантує, що PDF завжди виглядає так само, як прев'ю на екрані,
+     незалежно від того, як конкретний браузер друкує CSS. Кнопка "Друк /
+     зберегти як PDF" тепер викликає це замість window.print() (див.
+     js/app.js, handleSavePdf()). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -87,6 +91,26 @@
        parseKoshtorysDetail/findBudgetDetailPrices). -->
   <div class="field">
     <label class="checkbox-field"><input type="checkbox" id="in-budget-detail" /> Розширений бюджет (розшифровка «Витратні матеріали» по комплектуючим)</label>
+  </div>
+
+  <!-- "Розділи КП" (запит Анни, 2026-07-20) — наразі впливає ЛИШЕ на формат
+       "Документ" (renderDocument() у kp-render.js); формат "Презентація"
+       поки не чіпаємо — за домовленістю з Анною повернемось до цього
+       пізніше. За замовчуванням усі 4 чекбокси увімкнені. Якщо менеджер
+       жодного з них руками не чіпав, app.js сам знімає позначку з розділу,
+       для якого в щойно завантаженому файлі-розрахунку немає відповідних
+       даних (напр. "Фінансові показники", коли клієнту рахували лише
+       обладнання, без тарифу/моделі) — див. js/app.js,
+       wireSectionCheckboxes()/resolveSections(). Будь-який чекбокс, який
+       менеджер сам поставив чи зняв, "розумний дефолт" більше НЕ чіпає. -->
+  <div class="field">
+    <label>Розділи КП (поки що діє лише для формату «Документ»)</label>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <label class="checkbox-field"><input type="checkbox" id="in-sec-tech" checked /> Технічне рішення / технічні характеристики</label>
+      <label class="checkbox-field"><input type="checkbox" id="in-sec-finance" checked /> Фінансові показники</label>
+      <label class="checkbox-field"><input type="checkbox" id="in-sec-budget" checked /> Бюджет реалізації</label>
+      <label class="checkbox-field"><input type="checkbox" id="in-sec-warranty" checked /> Гарантійний термін та термін використання</label>
+    </div>
   </div>
 
   <div class="field">
