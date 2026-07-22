@@ -56,7 +56,7 @@
       <div class="hero-bg" style="background-image:url('assets/hero-bg.jpg')"></div>
       <div class="hero-overlay"></div>
       <img class="hero-logo" src="assets/logo-white.png" alt="escore" />
-      <div class="hero-title">${cap(m.tech.stationType)} сонячна<br/>електростанція${m.tech.stationCapacityKw ? `<br/>${fmtNum(m.tech.stationCapacityKw, 2)} кВт` : ""}</div>
+      <div class="hero-title">${m.hasPanels === false ? "Джерело безперебійного<br/>живлення" : `${cap(m.tech.stationType)} сонячна<br/>електростанція`}${m.tech.stationCapacityKw ? `<br/>${fmtNum(m.tech.stationCapacityKw, 2)} кВт` : ""}</div>
     </section>`;
   }
 
@@ -108,10 +108,9 @@
     <section class="kp-page cover-page">
       ${pageHeader(m.meta, "cover")}
       <div class="kp-eyebrow">Сонячна електростанція під ключ</div>
-      <div class="kp-title">${cap(m.tech.stationType)} СЕС${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>
+      <div class="kp-title">${m.hasPanels === false ? "Джерело безперебійного живлення" : `${cap(m.tech.stationType)} СЕС`}${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>
       <div class="kp-desc">
-        Тип рішення: <b>${esc(m.tech.stationType)} сонячна електростанція</b>${m.tech.hasBattery ? " та акумуляторна система (автономія / резерв)" : ""} — генерація
-        власної електроенергії для потреб об'єкта зі зниженням витрат на електропостачання.
+        Тип рішення: <b>${esc(stationNameNom(m))}</b>${m.hasPanels !== false && m.tech.hasBattery ? " та акумуляторна система (автономія / резерв)" : ""} — ${m.hasPanels === false ? "автономне резервне живлення об'єкта на акумуляторах, без сонячної генерації." : "генерація власної електроенергії для потреб об'єкта зі зниженням витрат на електропостачання."}
       </div>
       <!-- Об'єкт/Виконавець збільшено та виділено картками (запит Анни,
            2026-07-07) — той самий візуальний стиль, що й у stat-card. Значення
@@ -191,8 +190,9 @@
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">01</span> Про проєкт</div>
       <div class="kp-body">
-        <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. Рішення забезпечує генерацію власної електроенергії у денні години,
-        коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}</p>
+        <p>Пропонуємо будівництво ${esc(stationNameGen(m))}${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. ${m.hasPanels === false
+          ? "Рішення забезпечує безперебійне живлення критичних навантажень об'єкта від акумуляторної системи під час перебоїв електропостачання."
+          : `Рішення забезпечує генерацію власної електроенергії у денні години, коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}`}</p>
         ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}
         <p>Повний цикл робіт «під ключ»: проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</p>
       </div>
@@ -800,6 +800,20 @@
   }
 
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  // "Без панелей" (запит Анни, 2026-07-22, терміново): без сонячних панелей
+  // це вже не "сонячна електростанція" (гібридна/мережева), а система
+  // резервного живлення на акумуляторах — тому назва станції по всьому
+  // документу підміняється на "Джерело безперебійного живлення". Два
+  // відмінки (називний і родовий) — бо фраза вживається в різних
+  // граматичних контекстах ("Джерело..." як заголовок і "будівництво
+  // джерела..." в тексті). m.hasPanels === false перевіряється явно
+  // (не просто falsy), щоб виклики без цього поля не ламались.
+  function stationNameNom(m) {
+    return m.hasPanels === false ? "Джерело безперебійного живлення" : `${cap(m.tech.stationType)} сонячна електростанція`;
+  }
+  function stationNameGen(m) {
+    return m.hasPanels === false ? "джерела безперебійного живлення" : `${m.tech.stationTypeGen} сонячної електростанції`;
+  }
 
   function tierColors(values) {
     const n = values.length;
