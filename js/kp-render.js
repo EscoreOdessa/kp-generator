@@ -912,7 +912,12 @@
   }
 
   function docTitle(m) {
-    return `<div class="doc-title">${cap(m.tech.stationType)} сонячна електростанція${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>`;
+    // "Без панелей" (2026-07-22, третє термінове уточнення того ж дня):
+    // формат "Документ" мав свою окрему копію цього заголовка, яку перший
+    // прохід (для формату "Презентація") не зачепив — той самий
+    // stationNameNom(m) helper, що вже використовується на обкладинці
+    // слайд-формату.
+    return `<div class="doc-title">${esc(stationNameNom(m))}${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>`;
   }
 
   // Той самий текст-абзац, що й на слайді "Про проект" (pageAbout вище) —
@@ -924,8 +929,9 @@
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     return `<div class="doc-preamble">
-      <p>Пропонуємо будівництво ${esc(m.tech.stationTypeGen)} сонячної електростанції${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. Рішення забезпечує генерацію власної електроенергії у денні години,
-      коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}</p>
+      <p>Пропонуємо будівництво ${esc(stationNameGen(m))}${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. ${m.hasPanels === false
+        ? "Рішення забезпечує безперебійне живлення критичних навантажень об'єкта від акумуляторної системи під час перебоїв електропостачання."
+        : `Рішення забезпечує генерацію власної електроенергії у денні години, коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}`}</p>
       ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}
       <p>Повний цикл робіт «під ключ»: проєктування, постачання обладнання, монтаж, підключення, пусконалагодження та запуск.</p>
     </div>`;
