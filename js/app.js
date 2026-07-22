@@ -112,6 +112,10 @@
       // має очікуваної структури — сторінка "03" тоді сама впаде назад на
       // стандартний хардкод-список, див. kp-render.js).
       const budgetDetailOn = document.getElementById("in-budget-detail").checked;
+      // "Без сонячних панелей" (запит Анни, 2026-07-22) — див. коментар
+      // над полем #in-no-panels в index.html. За замовчуванням (чекбокс
+      // вимкнено) hasPanels = true, тобто нинішня поведінка не міняється.
+      const hasPanels = !document.getElementById("in-no-panels").checked;
 
       setStatus("Читаємо Google Sheet...");
       const data = await KpSheets.loadCalcFromSheet(sheetUrl, mode, { budgetDetail: budgetDetailOn });
@@ -214,6 +218,7 @@
         seasonalHourly,
         clientMode: mode,
         sections,
+        hasPanels,
       };
 
       const docHolder = document.getElementById("kp-doc");

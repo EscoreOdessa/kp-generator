@@ -129,16 +129,25 @@
            Анни, 2026-07-07): великий заголовок "Розташування панелей на
            об'єкті" без імені файлу зображення. -->
       ${hero ? `<div class="hero-caption-title">Розташування панелей на об'єкті</div><div class="hero-img"><img src="${hero.url}"/></div>` : ""}
-      <div class="stat-cards">
+      <!-- "Без панелей" (запит Анни, 2026-07-22, див. #in-no-panels в
+           index.html/app.js): ховає картки "Панелі" й "Потужність масиву
+           фотомодулів" (обидві стосуються генерації), лишаючи тільки
+           інвертор + акумулятори — тоді картки на 2 колонки (cols-2,
+           той самий клас, що вже є в style.css для fin-page), а не на 4,
+           щоб не лишати порожній простір у сітці. m.hasPanels typeof
+           перевіряється явно на false, а не просто falsy — старі виклики
+           без цього поля (якщо колись з'являться) мають лишати нинішню
+           поведінку (з панелями), а не ламатись. -->
+      <div class="stat-cards${m.hasPanels === false ? " cols-2" : ""}">
         <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність інверторної групи, ${m.tech.invertersQty || "—"} шт</div></div>
-        <div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">${esc(m.tech.panelModel || "Панелі")}</div></div>
+        ${m.hasPanels === false ? "" : `<div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">${esc(m.tech.panelModel || "Панелі")}</div></div>
         <!-- Потужність масиву фотомодулів — комірка B3 вкладки "Моделювання
              Фін. показників роботи СЕС" (підпис "Потужність СЕС" у сусідній
              комірці A3). Беремо вже готове значення m.model.capacityKw, яке
              парситься саме з цієї комірки в sheets.js (parseModelSheet) —
              замінює собою картку моделі гібридного інвертора (запит Анни,
              2026-07-07). -->
-        <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність масиву фотомодулів</div></div>
+        <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність масиву фотомодулів</div></div>`}
         <div class="stat-card"><div class="num">${m.tech.batteryQty || "—"} шт</div><div class="lbl">${esc(m.tech.batteryModel || "Акумулятори")}</div></div>
       </div>
     </section>`;
@@ -193,7 +202,11 @@
         <div class="stat-card"><div class="num">${m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) : "—"}</div><div class="lbl">Річна генерація 1 кВт, кВт·год</div></div>
         <div class="stat-card"><div class="num">${m.model.gen30y ? fmtNum(m.model.gen30y) : "—"}</div><div class="lbl">Генерація за 30 років, кВт·год</div></div>
       </div>` : ""}
-      ${m.model.months.length ? `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` : ""}
+      <!-- "Без панелей" (2026-07-22): графік помісячної генерації ховаємо
+           навіть якщо m.model.months технічно не порожній (рядки в файлі
+           можуть бути з нульовими значеннями) — без панелей генерації
+           нема, графік був би просто порожнім/пласким. -->
+      ${(m.hasPanels !== false && m.model.months.length) ? `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` : ""}
       ${gallery.length ? `<div class="gallery">${gallery.map((g, i) => `<figure><img src="${g.url}"/><figcaption>Зображення ${i + 2}${g.name ? " — " + esc(g.name) : ""}</figcaption></figure>`).join("")}</div>` : ""}
     </section>`;
   }
@@ -1040,12 +1053,18 @@
     model.meta.company = window.KP_CONFIG.COMPANY;
     model.tech = buildTechSpec(model.pdv);
 
+    // "Без панелей" (2026-07-22): сторінка "02 Фінансові показники" вся
+    // про економію/окупність від генерації — без панелей нема що на ній
+    // показувати, тож не додаємо її до документа взагалі (сторінка "03
+    // Бюджет реалізації" просто йде одразу після "01" — той самий
+    // прийнятний "розрив" у нумерації, що вже є для опційних сторінок
+    // "04"/"05" — PvSyst/сезонні графіки — коли їх немає).
     const html = [
       pageHero(model),
       pageWhyEscore(),
       pageCover(model),
       pageAbout(model),
-      pageTech(model),
+      model.hasPanels === false ? "" : pageTech(model),
       pageBudget(model),
       pageShading(model),
       pageSeasonal(model),
