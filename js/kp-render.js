@@ -134,7 +134,7 @@
            моделі панелі (число — та сама кількість панелей); 4-та картка
            замінена з "кількість + модель акумулятора" на ємність
            акумуляторної групи в кВт·год — фіксована комірка з файлу-
-           розрахунку (L38 на вкладці ПДВ / O40 на вкладці Готівка_ФОП,
+           розрахунку (L39 на вкладці ПДВ / O40 на вкладці Готівка_ФОП,
            залежно від режиму — див. sheets.js parseAccumulatorCapacityKwh),
            а не з назви позиції в номенклатурі. -->
       <div class="stat-cards${m.hasPanels === false ? " cols-2" : ""}">
@@ -378,9 +378,18 @@
     return cat ? cat.items : [];
   }
 
+  // opts.showPrice (додано 2026-07-23, разом з динамічною пагінацією
+  // бюджету нижче) — за замовчуванням true (стара поведінка: перший рядок
+  // групи отримує мержовану комірку ціни). Коли підрозділ доводиться
+  // розрізати між сторінками (paginateBudget нижче), кожен ФРАГМЕНТ
+  // підрозділу рендериться окремим викликом budgetGroupRows — щоб сума
+  // ціни підрозділу не дублювалась на кожному фрагменті, showPrice:false
+  // ставиться на всіх фрагментах, КРІМ того, що містить останню позицію
+  // підрозділу (там ціна показується один раз, як і раніше).
   function budgetGroupRows(items, getName, getQty, priceVal, catLabel, groupClass, opts) {
     if (!items.length) return "";
     opts = opts || {};
+    const showPrice = opts.showPrice !== false;
     // Довгі підписи підрозділів (напр. "Автоматика захисту фотоелектричних
     // модулів (постійний струм)" — з'явились разом із "Розширеним
     // бюджетом", 2026-07-18) не влазять в один рядок повернутого на 90°
@@ -404,7 +413,7 @@
         ${first ? `<td class="${catClass}" rowspan="${items.length}"><span>${esc(catLabel)}</span></td>` : ""}
         <td contenteditable="true">${esc(name)}</td>
         <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
-        ${first ? `<td class="num budget-price" rowspan="${items.length}"><span contenteditable="true">${fmtUsd(priceVal)}</span></td>` : ""}
+        ${first && showPrice ? `<td class="num budget-price" rowspan="${items.length}"><span contenteditable="true">${fmtUsd(priceVal)}</span></td>` : ""}
       </tr>`;
     }).join("");
   }
@@ -437,15 +446,21 @@
     ];
   }
 
+  // Винесено окремо (2026-07-23, разом з динамічною пагінацією нижче) —
+  // потрібен і тут (справжній рендер таблиці), і в measureAvailableHeight()
+  // нижче (вимірювання "скільки місця лишається під рядки" на порожній
+  // таблиці з тим самим заголовком).
+  function budgetTheadHtml(priceHeader) {
+    return `<tr>
+        <th colspan="2">Найменування</th>
+        <th class="num">Кількість</th>
+        <th class="num">${priceHeader}</th>
+      </tr>`;
+  }
+
   function budgetTable(bodyHtml, priceHeader, tfootHtml) {
     return `<table class="budget-table">
-      <thead>
-        <tr>
-          <th colspan="2">Найменування</th>
-          <th class="num">Кількість</th>
-          <th class="num">${priceHeader}</th>
-        </tr>
-      </thead>
+      <thead>${budgetTheadHtml(priceHeader)}</thead>
       <tbody>${bodyHtml}</tbody>
       ${tfootHtml ? `<tfoot>${tfootHtml}</tfoot>` : ""}
     </table>`;
@@ -468,35 +483,249 @@
     </aside>`;
   }
 
-  // "Розширений бюджет" — розбиття на 2 сторінки (запит Анни, 2026-07-18,
-  // ПІСЛЯ живої перевірки): при реальній кількості позицій у "Кабельно-
-  // провідникова продукція" (у тестовому файлі — 18) три деталізовані
-  // підрозділи разом з "Обладнання"/"Роботи"/підсумками НЕ вміщались в
-  // одну сторінку з фіксованою висотою (.budget-page{overflow:hidden}) —
-  // "Роботи" й підсумкові суми просто зникали (обрізались), хоча в даних
-  // вони були. Анна обрала явний варіант "розбити на 2 сторінки" замість
-  // стиснення шрифту (шрифт і так вже стиснутий до межі читабельності) чи
-  // обрізання списку (вона explicitly НЕ хоче ховати реальні позиції
-  // клієнта). ОНОВЛЕНО (2026-07-19, наступна сесія, після першого живого
-  // тесту): порядок підрозділів змінено на логічний — Обладнання, АС, DC,
-  // Кабельно-провідникова продукція, Роботи (раніше Роботи стояли одразу
-  // після DC лише щоб влізти на 1-шу сторінку). Сторінка "03" (з бейджем)
-  // — Обладнання + AC/DC (завжди короткі, по 3-5 позицій) + примітки
-  // праворуч (2-колоночний .budget-layout, як і в звичайному режимі).
-  // Друга сторінка (без бейджа, повторний хедер) — Кабельно-провідникова
-  // продукція (найдовший підрозділ) + Роботи + підсумкові суми, НА ВСЮ
-  // ШИРИНУ (без приміток поруч — саме брак ширини там і спричиняв
-  // переповнення минулого разу, див. коментар нижче над page1/page2).
+  // ---------- Динамічна пагінація бюджету (переписано 2026-07-23) ----------
+  // РАНІШЕ (2026-07-18/19) тут було ЖОРСТКО зашито рівно 2 сторінки:
+  // 1-ша — Обладнання+AC+DC (2-колоночний .budget-layout з примітками
+  // праворуч), 2-га — Кабельно-провідникова продукція+Роботи+підсумки (на
+  // всю ширину). Розрахунок "скільки рядків влазить" був ЛЮДСЬКОЮ ОЦІНКОЮ
+  // за попереднім тестовим файлом (~15 рядків на 1-й сторінці, ~18-20 на
+  // 2-й) — і на реальному робочому файлі Анни (2026-07-23) ця оцінка
+  // виявилась замалою: 2-га сторінка знову не вмістила Кабельну продукцію+
+  // Роботи+підсумки повністю (частина знову обрізалась/зникала, той самий
+  // клас багу, що й раніше). Замість того щоб знову підбирати числа "на
+  // око" під ЦЕЙ конкретний файл (і знову зламатись на наступному, довшому
+  // файлі), пагінація тепер рахується ДИНАМІЧНО — реальним вимірюванням
+  // висоти в живому DOM (сторінки й так рендеряться в браузері, а не лише
+  // в PDF-скріншот, тож можна дозволити собі один додатковий прохід
+  // "виміряти, потім намалювати"):
+  //   1) measureAvailableHeight() рендерить ПОРОЖНЮ сторінку (з реальним
+  //      заголовком+назвою) у прихований (visibility:hidden,
+  //      position:absolute; left:-99999px) вузол поза екраном і читає
+  //      clientHeight області, що відводиться під таблицю (той самий
+  //      flex:1-розтягнутий контейнер, що й у справжньому рендері) —
+  //      окремо для 1-ї сторінки (2-колоночний layout+примітки) і для
+  //      сторінок-продовжень (на всю ширину).
+  //   2) measureRowsHtml()/measureTfootHtml() рендерять КОНКРЕТНИЙ HTML
+  //      рядків (ту саму розмітку, що піде у фінальний документ, з
+  //      правильною шириною колонок) і читають природну (не розтягнуту)
+  //      висоту таблиці — так дізнаємось, скільки саме пікселів займе
+  //      будь-який набір рядків.
+  //   3) paginateBudgetSections() жадібно заповнює сторінки: бере
+  //      підрозділи по черзі (Обладнання → AC/DC/Кабельна+Роботи або
+  //      Матеріали+Роботи), і для кожного домірює, скільки позицій
+  //      влазить у залишок місця на поточній сторінці; якщо підрозділ не
+  //      влазить цілком — розрізає ЙОГО (не між підрозділами, а
+  //      всередині, якщо треба) і переносить лишок на нову сторінку
+  //      (з новою мержованою коміркою назви підрозділу, з припискою
+  //      "(продовження)" для наочності). Підсумки (totalsHtml) теж
+  //      перевіряються на "чи влазять" — якщо ні, отримують окрему
+  //      сторінку. Кількість сторінок-продовжень тепер НЕ обмежена
+  //      двома — стільки, скільки реально потрібно під конкретний файл.
   // Загальна нумерація наступних сторінок (04 PvSyst, 05 сезонні графіки)
-  // НЕ зсувається — друга сторінка бюджету навмисно без власного номера,
-  // як і сторінки "Гарантія"/"Менеджер" наприкінці документа. У звичайному
-  // режимі (чекбокс вимкнено, m.budgetDetail null) поведінка 1:1 стара —
-  // одна сторінка "03", без змін.
-  function pageBudget(m) {
+  // як і раніше НЕ зсувається — сторінки-продовження бюджету навмисно без
+  // власного номера, як і сторінки "Гарантія"/"Менеджер" наприкінці
+  // документа.
+  function getMeasureHost() {
+    const host = document.createElement("div");
+    host.style.position = "absolute";
+    host.style.left = "-99999px";
+    host.style.top = "0";
+    host.style.visibility = "hidden";
+    host.style.pointerEvents = "none";
+    document.body.appendChild(host);
+    return host;
+  }
+
+  function getPageContentWidth() {
+    const cs = getComputedStyle(document.documentElement);
+    const pageW = parseFloat(cs.getPropertyValue("--page-w")) || 1123;
+    const pagePad = parseFloat(cs.getPropertyValue("--page-pad")) || 46;
+    return pageW - pagePad * 2;
+  }
+
+  // Природна (нерозтягнута) висота набору <tr> — вимірюється через
+  // style="height:auto" на самій таблиці, що перекриває CSS-правило
+  // ".budget-table-wrap table.budget-table{height:100%}" (inline-стиль має
+  // вищий пріоритет за клас) — інакше таблиця завжди повертала б повну
+  // висоту сторінки незалежно від кількості рядків.
+  function measureRowsHtml(rowsHtml, wide, host) {
+    const width = getPageContentWidth();
+    const markup = wide
+      ? `<div style="width:${width}px"><table class="budget-table" style="height:auto"><tbody>${rowsHtml}</tbody></table></div>`
+      : `<div class="budget-layout" style="width:${width}px;height:auto"><table class="budget-table" style="height:auto"><tbody>${rowsHtml}</tbody></table><aside class="budget-notes"></aside></div>`;
+    host.innerHTML = markup;
+    return host.querySelector("table.budget-table").offsetHeight;
+  }
+
+  function measureTfootHtml(tfootHtml, wide, host) {
+    const width = getPageContentWidth();
+    const markup = wide
+      ? `<div style="width:${width}px"><table class="budget-table" style="height:auto"><tfoot>${tfootHtml}</tfoot></table></div>`
+      : `<div class="budget-layout" style="width:${width}px;height:auto"><table class="budget-table" style="height:auto"><tfoot>${tfootHtml}</tfoot></table><aside class="budget-notes"></aside></div>`;
+    host.innerHTML = markup;
+    return host.querySelector("table.budget-table").offsetHeight;
+  }
+
+  // Реальна доступна висота під таблицю на сторінці бюджету — рендеримо
+  // справжню структуру сторінки (заголовок+назва+обгортка) БЕЗ height:auto
+  // перекриття, щоб .budget-layout/.budget-table-wrap природно розтягнулись
+  // через flex:1 (той самий механізм, що й у справжньому документі) і
+  // читаємо їхню clientHeight — це і є "скільки місця під рядки лишається".
+  function measureAvailableHeight(m, wide, priceHeader, host) {
+    const headerHtml = pageHeader(m.meta);
+    const titleHtml = wide
+      ? `<div class="section-title">Бюджет реалізації (продовження)</div>`
+      : `<div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>`;
+    const theadHtml = `<thead>${budgetTheadHtml(priceHeader)}</thead>`;
+    const bodyHtml = wide
+      ? `<div class="budget-table-wrap"><table class="budget-table">${theadHtml}<tbody></tbody></table></div>`
+      : `<div class="budget-layout"><table class="budget-table">${theadHtml}<tbody></tbody></table>${budgetNotesAside({ detail: true })}</div>`;
+    host.innerHTML = `<section class="kp-page budget-page">${headerHtml}${titleHtml}${bodyHtml}</section>`;
+    const wrap = host.querySelector(wide ? ".budget-table-wrap" : ".budget-layout");
+    return wrap.clientHeight;
+  }
+
+  // Найбільша к-сть позицій із початку items, чий рендер (buildHtmlFn)
+  // влазить у freeHeight пікселів. buildHtmlFn(subset, isFinalSubset) сам
+  // вирішує, чи показувати ціну підрозділу (isFinalSubset — це справді
+  // остання позиція ВСЬОГО підрозділу, а не лише цього фрагмента).
+  function fitItemsToHeight(items, buildHtmlFn, freeHeight, wide, host) {
+    let best = { k: 0, html: "", height: 0 };
+    if (freeHeight <= 0) return best;
+    for (let k = 1; k <= items.length; k++) {
+      const isFinal = k === items.length;
+      const html = buildHtmlFn(items.slice(0, k), isFinal);
+      const height = measureRowsHtml(html, wide, host);
+      if (height <= freeHeight) {
+        best = { k, html, height };
+      } else {
+        break;
+      }
+    }
+    return best;
+  }
+
+  function buildBudgetSections(m, b) {
     const equip = findBudgetEquipItems(m.pdv);
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
     const works = findBudgetWorksItems(m.pdv);
     const worksRows = works.length ? works : [{ name: "—", qty: null }];
+    const sub = budgetDetailSubsections(m);
+
+    const sections = [
+      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip", separator: false },
+    ];
+    if (sub) {
+      const acItems = sub[0].items && sub[0].items.length ? sub[0].items : [{ name: "—", qty: null }];
+      const dcItems = sub[1].items && sub[1].items.length ? sub[1].items : [{ name: "—", qty: null }];
+      const cableItems = sub[2].items && sub[2].items.length ? sub[2].items : [{ name: "—", qty: null }];
+      sections.push({ items: acItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[0].price, label: sub[0].label, groupClass: "grp-mat", separator: true });
+      sections.push({ items: dcItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[1].price, label: sub[1].label, groupClass: "grp-mat", separator: true });
+      sections.push({ items: cableItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[2].price, label: sub[2].label, groupClass: "grp-mat", separator: false });
+      sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", separator: true });
+    } else {
+      sections.push({ items: BUDGET_MATERIALS.map((n) => ({ name: n, qty: 1 })), nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.materialsCost, label: "Витратні матеріали", groupClass: "grp-mat", separator: false });
+      sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", separator: false });
+    }
+    return sections;
+  }
+
+  function paginateBudgetSections(m, sections, priceHeader, totalsHtml) {
+    const host = getMeasureHost();
+    try {
+      const availNarrow = measureAvailableHeight(m, false, priceHeader, host);
+      const availWide = measureAvailableHeight(m, true, priceHeader, host);
+
+      const pages = [{ wide: false, rowsHtml: "", usedHeight: 0, availableHeight: availNarrow }];
+      const currentPage = () => pages[pages.length - 1];
+      const startNewPage = () => { pages.push({ wide: true, rowsHtml: "", usedHeight: 0, availableHeight: availWide }); };
+
+      sections.forEach((section) => {
+        let remaining = section.items.slice();
+        let isFirstFragment = true;
+        let guard = 0;
+        while (remaining.length && guard++ < 60) {
+          const page = currentPage();
+          const freeHeight = page.availableHeight - page.usedHeight;
+          const fit = fitItemsToHeight(
+            remaining,
+            (subset, isFinal) => budgetGroupRows(
+              subset, section.nameFn, section.qtyFn,
+              isFinal ? section.price : null,
+              section.label + (isFirstFragment ? "" : " (продовження)"),
+              section.groupClass,
+              { separator: section.separator && isFirstFragment, showPrice: isFinal }
+            ),
+            freeHeight, page.wide, host
+          );
+          if (fit.k === 0) {
+            // Нічого не влазить у залишок поточної сторінки. Якщо сторінка
+            // взагалі порожня (usedHeight===0) і навіть ОДНА позиція не
+            // влазить у ЦІЛУ сторінку — це вже патологічний випадок
+            // (абсурдно довга назва), приймаємо перевищення для 1 позиції,
+            // щоб не зациклитись на порожніх сторінках.
+            if (page.usedHeight === 0) {
+              const forcedHtml = budgetGroupRows(
+                remaining.slice(0, 1), section.nameFn, section.qtyFn,
+                remaining.length === 1 ? section.price : null,
+                section.label + (isFirstFragment ? "" : " (продовження)"),
+                section.groupClass,
+                { separator: section.separator && isFirstFragment, showPrice: remaining.length === 1 }
+              );
+              page.rowsHtml += forcedHtml;
+              page.usedHeight += measureRowsHtml(forcedHtml, page.wide, host);
+              remaining = remaining.slice(1);
+              isFirstFragment = false;
+              if (remaining.length) startNewPage();
+              continue;
+            }
+            startNewPage();
+            continue;
+          }
+          page.rowsHtml += fit.html;
+          page.usedHeight += fit.height;
+          remaining = remaining.slice(fit.k);
+          isFirstFragment = false;
+          if (remaining.length) startNewPage();
+        }
+      });
+
+      let page = currentPage();
+      const freeHeight = page.availableHeight - page.usedHeight;
+      const totalsHeight = measureTfootHtml(totalsHtml, page.wide, host);
+      if (totalsHeight > freeHeight) {
+        startNewPage();
+        page = currentPage();
+      }
+      page.totalsHtml = totalsHtml;
+
+      return pages.map((p) => {
+        if (!p.wide) {
+          return `
+          <section class="kp-page budget-page">
+            ${pageHeader(m.meta)}
+            <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
+            <div class="budget-layout">
+              ${budgetTable(p.rowsHtml, priceHeader, p.totalsHtml || null)}
+              ${budgetNotesAside({ detail: true })}
+            </div>
+          </section>`;
+        }
+        return `
+        <section class="kp-page budget-page">
+          ${pageHeader(m.meta)}
+          <div class="section-title">Бюджет реалізації (продовження)</div>
+          <div class="budget-table-wrap">
+            ${budgetTable(p.rowsHtml, priceHeader, p.totalsHtml || null)}
+          </div>
+        </section>`;
+      }).join("");
+    } finally {
+      host.remove();
+    }
+  }
+
+  function pageBudget(m) {
     const b = m.budget || {};
     // Режим "C" (без ПДВ, запит Анни 2026-07-18) — не показуємо ані рядок
     // податку, ані слово "ПДВ" в підписах підсумку/шапки таблиці взагалі.
@@ -518,77 +747,8 @@
             <tr class="sum"><td></td><td colspan="2" class="sum-label">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
             <tr class="sum grand"><td></td><td colspan="2" class="sum-label">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
 
-    const sub = budgetDetailSubsections(m);
-    const equipHtml = budgetGroupRows(equipRows, (it) => it.name, (it) => it.qty, b.equipmentCost, "Обладнання", "grp-equip");
-    const worksHtml = budgetGroupRows(worksRows, (it) => it.name, (it) => it.qty, b.worksCost, "Роботи", "grp-works");
-
-    if (!sub) {
-      // Стара однасторінкова версія (чекбокс вимкнено) — без змін.
-      const materialsHtml = budgetGroupRows(BUDGET_MATERIALS, (n) => n, () => 1, b.materialsCost, "Витратні матеріали", "grp-mat");
-      return `
-      <section class="kp-page budget-page">
-        ${pageHeader(m.meta)}
-        <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
-        <div class="budget-layout">
-          ${budgetTable(equipHtml + materialsHtml + worksHtml, priceHeader, totalsHtml)}
-          ${budgetNotesAside()}
-        </div>
-      </section>`;
-    }
-
-    // Порядок підрозділів (запит Анни, 2026-07-19, після першого живого
-    // тесту): Обладнання, АС, DC, Кабельно-провідникова продукція, Роботи —
-    // Роботи перенесено з 1-ї сторінки на кінець, ПІСЛЯ кабельної групи
-    // (раніше стояли одразу після DC, щоб влізти на 1-шу сторінку — тепер
-    // порядок логічний, а розміщення по сторінках вирішується окремо,
-    // нижче). ОНОВЛЕНО (той самий день, друге прохання Анни): separator
-    // (клас "grp-sep", товща лінія — див. budgetGroupRows/style.css) тепер
-    // стоїть МІЖ УСІМА підрозділами — АС (після Обладнання), DC (після АС),
-    // Роботи (після Кабельної продукції) — а не лише між АС/DC, як було
-    // спочатку. Виняток лишається той самий: Обладнання й Кабельна
-    // продукція НЕ отримують separator, бо вони завжди перші рядки tbody
-    // своєї сторінки (одразу під шапкою таблиці) — лінія одразу під шапкою
-    // виглядала б зайвою/задвоєною.
-    const acHtml = budgetGroupRows(sub[0].items && sub[0].items.length ? sub[0].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[0].price, sub[0].label, "grp-mat", { separator: true });
-    const dcHtml = budgetGroupRows(sub[1].items && sub[1].items.length ? sub[1].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[1].price, sub[1].label, "grp-mat", { separator: true });
-    const cableHtml = budgetGroupRows(sub[2].items && sub[2].items.length ? sub[2].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[2].price, sub[2].label, "grp-mat");
-    const worksHtmlOrdered = budgetGroupRows(worksRows, (it) => it.name, (it) => it.qty, b.worksCost, "Роботи", "grp-works", { separator: true });
-
-    // Розбиття на сторінки (перероблено 2026-07-19 разом зі зміною порядку
-    // й проханням Анни лишити примітки праворуч від таблиці, а не окремим
-    // блоком знизу): 1-ша сторінка — Обладнання+AC+DC (~15 рядків, завжди
-    // короткі підрозділи) — вона й раніше (до появи "Розширеного бюджету")
-    // вміщувала в тому самому 2-колоночному .budget-layout (таблиця +
-    // примітки праворуч) до 20-21 рядка РАЗОМ із підсумками, тож 15 рядків
-    // БЕЗ підсумків тут вміщується з великим запасом. Примітки (в т.ч. нова,
-    // про підбір аналога) лишаються праворуч, як і завжди. 2-га сторінка —
-    // Кабельно-провідникова продукція (найдовший підрозділ, ~18-20 рядків з
-    // практики) + Роботи (5) + підсумки — НА ВСЮ ШИРИНУ, без приміток поруч:
-    // саме брак ширини (вузька таблиця поруч із блоком приміток) минулого
-    // разу змушував довгі назви комплектуючих переноситись на 2 рядки й
-    // накопичувати зайву висоту, що й переповнювало сторінку. На всю ширину
-    // рядки лишаються однорядковими — той самий прийом, що вже підтверджено
-    // робочим на 1-й сторінці старої (однасторінкової) версії.
-    const page1 = `
-    <section class="kp-page budget-page">
-      ${pageHeader(m.meta)}
-      <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
-      <div class="budget-layout">
-        ${budgetTable(equipHtml + acHtml + dcHtml, priceHeader, null)}
-        ${budgetNotesAside({ detail: true })}
-      </div>
-    </section>`;
-
-    const page2 = `
-    <section class="kp-page budget-page">
-      ${pageHeader(m.meta)}
-      <div class="section-title">Бюджет реалізації (продовження)</div>
-      <div class="budget-table-wrap">
-        ${budgetTable(cableHtml + worksHtmlOrdered, priceHeader, totalsHtml)}
-      </div>
-    </section>`;
-
-    return page1 + page2;
+    const sections = buildBudgetSections(m, b);
+    return paginateBudgetSections(m, sections, priceHeader, totalsHtml);
   }
 
   // ---------- Сторінка 04 — імітаційна модель СЕС (PvSyst) ----------
