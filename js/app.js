@@ -213,6 +213,12 @@
         pdv,
         model: modelData,
         budget: data.budget,
+        // Ємність акумуляторної групи, кВт·год (запит Анни, 2026-07-23) —
+        // фіксована комірка з файлу-розрахунку (L39 на вкладці "ПДВ" / O40
+        // на вкладці "Готівка_ФОП", залежно від режиму — див. sheets.js
+        // parseAccumulatorCapacityKwh). Показується на обкладинці КП
+        // (kp-render.js pageCover) замість кількості акумуляторів.
+        accumulatorCapacityKwh: data.accumulatorCapacityKwh,
         budgetDetail: data.budgetDetail || null,
         pvsystImage,
         seasonalHourly,
