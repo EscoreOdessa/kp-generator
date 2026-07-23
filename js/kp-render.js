@@ -621,7 +621,12 @@
       const cableItems = sub[2].items && sub[2].items.length ? sub[2].items : [{ name: "—", qty: null }];
       sections.push({ items: acItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[0].price, label: sub[0].label, groupClass: "grp-mat", separator: true });
       sections.push({ items: dcItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[1].price, label: sub[1].label, groupClass: "grp-mat", separator: true });
-      sections.push({ items: cableItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[2].price, label: sub[2].label, groupClass: "grp-mat", separator: false });
+      // ВИПРАВЛЕНО (2026-07-23, запит Анни): раніше тут стояло separator:
+      // false — межа DC/Кабельна лишалась без лінії, хоча обидва
+      // підрозділи мають однаковий фон (grp-mat), і межа між ними так само
+      // губилась, як колись губилась межа AC/DC (див. коментар над
+      // budgetGroupRows). Тепер лінія є на КОЖНІЙ межі підрозділів.
+      sections.push({ items: cableItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[2].price, label: sub[2].label, groupClass: "grp-mat", separator: true });
       sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", separator: true });
     } else {
       sections.push({ items: BUDGET_MATERIALS.map((n) => ({ name: n, qty: 1 })), nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.materialsCost, label: "Витратні матеріали", groupClass: "grp-mat", separator: false });
