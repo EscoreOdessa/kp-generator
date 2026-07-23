@@ -112,18 +112,9 @@
       <div class="kp-desc">
         Тип рішення: <b>${esc(stationNameNom(m))}</b>${m.hasPanels !== false && m.tech.hasBattery ? " та акумуляторна система (автономія / резерв)" : ""} — ${m.hasPanels === false ? "автономне резервне живлення об'єкта на акумуляторах, без сонячної генерації." : "генерація власної електроенергії для потреб об'єкта зі зниженням витрат на електропостачання."}
       </div>
-      <!-- Об'єкт/Виконавець збільшено та виділено картками (запит Анни,
-           2026-07-07) — той самий візуальний стиль, що й у stat-card. Значення
-           "Об'єкт" тепер порожнє, якщо назву не вписано вручну у форму (запит
-           Анни, 2026-07-19) — раніше сюди підставлялось "—" навіть коли назва
-           взагалі не задавалась; тепер, коли app.js більше НЕ підставляє ані
-           автоматично прочитану з файлу назву, ані плейсхолдер (див.
-           objectLabel() нижче й коментар у app.js), тут просто нічого не
-           пишеться, якщо m.meta.object порожній. -->
-      <div class="meta-grid">
-        <div><div class="k">Об'єкт</div><div class="v">${esc(m.meta.object)}</div></div>
-        <div><div class="k">Виконавець</div><div class="v">${esc(m.meta.company.name)}</div></div>
-      </div>
+      <!-- Плашки "Об'єкт"/"Виконавець" (.meta-grid) прибрано повністю
+           (запит Анни, 2026-07-23) — раніше тут стояли дві картки з
+           назвою об'єкта й компанією-виконавцем. -->
       <!-- Підпис над фото замість підпису під фото з назвою файлу (запит
            Анни, 2026-07-07): великий заголовок "Розташування панелей на
            об'єкті" без імені файлу зображення. -->
@@ -136,10 +127,19 @@
            щоб не лишати порожній простір у сітці. m.hasPanels typeof
            перевіряється явно на false, а не просто falsy — старі виклики
            без цього поля (якщо колись з'являться) мають лишати нинішню
-           поведінку (з панелями), а не ламатись. -->
+           поведінку (з панелями), а не ламатись.
+           Картки "Сонячні панелі" (2-га) й "Ємність акумуляторної групи"
+           (4-та, запит Анни, 2026-07-23): 2-га картка тепер завжди показує
+           статичний підпис "Сонячні панелі" замість назви конкретної
+           моделі панелі (число — та сама кількість панелей); 4-та картка
+           замінена з "кількість + модель акумулятора" на ємність
+           акумуляторної групи в кВт·год — фіксована комірка з файлу-
+           розрахунку (L38 на вкладці ПДВ / O40 на вкладці Готівка_ФОП,
+           залежно від режиму — див. sheets.js parseAccumulatorCapacityKwh),
+           а не з назви позиції в номенклатурі. -->
       <div class="stat-cards${m.hasPanels === false ? " cols-2" : ""}">
         <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність інверторної групи, ${m.tech.invertersQty || "—"} шт</div></div>
-        ${m.hasPanels === false ? "" : `<div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">${esc(m.tech.panelModel || "Панелі")}</div></div>
+        ${m.hasPanels === false ? "" : `<div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">Сонячні панелі</div></div>
         <!-- Потужність масиву фотомодулів — комірка B3 вкладки "Моделювання
              Фін. показників роботи СЕС" (підпис "Потужність СЕС" у сусідній
              комірці A3). Беремо вже готове значення m.model.capacityKw, яке
@@ -147,7 +147,7 @@
              замінює собою картку моделі гібридного інвертора (запит Анни,
              2026-07-07). -->
         <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність масиву фотомодулів</div></div>`}
-        <div class="stat-card"><div class="num">${m.tech.batteryQty || "—"} шт</div><div class="lbl">${esc(m.tech.batteryModel || "Акумулятори")}</div></div>
+        <div class="stat-card"><div class="num">${m.accumulatorCapacityKwh != null ? fmtNum(m.accumulatorCapacityKwh, 2) : "—"} кВт·год</div><div class="lbl">Ємність акумуляторної групи</div></div>
       </div>
     </section>`;
   }
@@ -304,35 +304,35 @@
   // ---------- Сторінка 4 — бюджет реалізації ----------
   // Структура — 1:1 з референсного слайду "Бюджет реалізації" (запит
   // Анни, 2026-07-13): три групи (Обладнання / Витратні матеріали /
-  // Роботи), кожна зі своєю мержованою колонкою підсумку. Позиції групи
-  // "Обладнання" читаються ДИНАМІЧНО з категорії "Основне технічне
-  // обладнання та система кріплення" вкладки ПДВ (назва — колонка B,
-  // кількість — колонка C, як завжди в цьому проєкті — пошук за текстом,
-  // не за координатами), з виключенням службових нотаток менеджера (див.
+  // Роботи), кожна зі своєю мержованою колонкою підсумку. Позиції груп
+  // "Обладнання" й "Роботи" читаються ДИНАМІЧНО з номенклатурної вкладки
+  // (ПДВ або варіант "C") — "Обладнання" з категорії "Основне технічне
+  // обладнання та система кріплення" (findBudgetEquipItems), "Роботи" з
+  // категорії "Послуги МБР, ЕМР, ПНР та інше" (findBudgetWorksItems,
+  // додано 2026-07-23 — раніше "Роботи" були фіксованим переліком назв
+  // зі стандартного шаблону, кількість завжди 1; тепер, як і "Обладнання",
+  // рядок потрапляє в таблицю лише якщо в файлі колонка "К-сть ввести
+  // значення" не порожня й більша нуля — той самий фільтр, що вже
+  // застосовується до ВСІХ категорій номенклатури на рівні парсера, див.
+  // sheets.js parseNomenclatureSheet, виправлення 2026-07-22). "Обладнання"
+  // додатково виключає службові нотатки менеджера (див.
   // findBudgetEquipItems() нижче — ВИПРАВЛЕНО 2026-07-22, раніше тут був
   // жорсткий діапазон рядків B3:B10, який відрізав реальні позиції в
-  // файлах з більш ніж 8 позиціями обладнання). "Витратні матеріали" й
-  // "Роботи" —
+  // файлах з більш ніж 8 позиціями обладнання). "Витратні матеріали" —
   // фіксований перелік найменувань зі стандартного шаблону (кількість
-  // завжди 1, не з файлу — так попросила Анна). Підсумкові суми (Вартість
-  // без ПДВ по кожній групі, Разом без ПДВ, Загальна вартість з ПДВ)
-  // РАХУЮТЬСЯ з уже розібраних категорій ПДВ-вкладки (sheets.js,
-  // parseBudgetCells) — НЕ за фіксованими адресами комірок (той підхід
-  // ламався, коли в файлі траплялись зайві/задвоєні рядки — див. докладний
-  // коментар над parseBudgetCells у sheets.js).
+  // завжди 1, не з файлу — так попросила Анна; замінюється на 3 реальні
+  // підрозділи лише в режимі "Розширений бюджет", див. нижче). Підсумкові
+  // суми (Вартість без ПДВ по кожній групі, Разом без ПДВ, Загальна
+  // вартість з ПДВ) РАХУЮТЬСЯ з уже розібраних категорій ПДВ-вкладки
+  // (sheets.js, parseBudgetCells) — НЕ за фіксованими адресами комірок
+  // (той підхід ламався, коли в файлі траплялись зайві/задвоєні рядки —
+  // див. докладний коментар над parseBudgetCells у sheets.js).
   const BUDGET_MATERIALS = [
     "PV кабель для підключення фотомодулів, 6мм, Німеччина",
     "Автоматика захисту змінного струму",
     "Кабельно-провідникова продукція + конектори MC4",
     "Автоматика захисту фотоелектричних модулів (постійний струм)",
     "Витратні матеріали",
-  ];
-  const BUDGET_WORKS = [
-    "Будівельно-монтажні роботи",
-    "Електро-монтажні роботи",
-    "Прокладка електричного кабелю",
-    "Підйомні механізми",
-    "Доставка обладнання",
   ];
 
   // Розпізнає "службові" рядки-нотатки менеджера в категорії "Обладнання"
@@ -358,6 +358,24 @@
     });
     if (!cat) return [];
     return cat.items.filter((it) => !isStrayEquipNote(it.name));
+  }
+
+  // "Роботи" — додано 2026-07-23 (запит Анни): раніше фіксований
+  // хардкод-перелік (BUDGET_WORKS), тепер, як і "Обладнання" вище,
+  // читається ДИНАМІЧНО з категорії "3" номенклатурної вкладки (позиційно
+  // — рівно через дві категорії після "Обладнання", той самий підхід, що
+  // вже застосовується в sheets.js parseBudgetCells для worksCat). Рядки
+  // з порожньою/нульовою кількістю тут вже не потрапляють — цей фільтр
+  // застосовується для ВСІХ категорій одразу на рівні парсера (див.
+  // sheets.js parseNomenclatureSheet, виправлення 2026-07-22), тому
+  // додаткової фільтрації тут не потрібно.
+  function findBudgetWorksItems(pdv) {
+    const equipIdx = pdv.categories.findIndex((c) => {
+      const n = c.name.toLowerCase();
+      return n.includes("техн") && n.includes("облад");
+    });
+    const cat = equipIdx >= 0 ? pdv.categories[equipIdx + 2] : null;
+    return cat ? cat.items : [];
   }
 
   function budgetGroupRows(items, getName, getQty, priceVal, catLabel, groupClass, opts) {
@@ -477,6 +495,8 @@
   function pageBudget(m) {
     const equip = findBudgetEquipItems(m.pdv);
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
+    const works = findBudgetWorksItems(m.pdv);
+    const worksRows = works.length ? works : [{ name: "—", qty: null }];
     const b = m.budget || {};
     // Режим "C" (без ПДВ, запит Анни 2026-07-18) — не показуємо ані рядок
     // податку, ані слово "ПДВ" в підписах підсумку/шапки таблиці взагалі.
@@ -500,7 +520,7 @@
 
     const sub = budgetDetailSubsections(m);
     const equipHtml = budgetGroupRows(equipRows, (it) => it.name, (it) => it.qty, b.equipmentCost, "Обладнання", "grp-equip");
-    const worksHtml = budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works");
+    const worksHtml = budgetGroupRows(worksRows, (it) => it.name, (it) => it.qty, b.worksCost, "Роботи", "grp-works");
 
     if (!sub) {
       // Стара однасторінкова версія (чекбокс вимкнено) — без змін.
@@ -532,7 +552,7 @@
     const acHtml = budgetGroupRows(sub[0].items && sub[0].items.length ? sub[0].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[0].price, sub[0].label, "grp-mat", { separator: true });
     const dcHtml = budgetGroupRows(sub[1].items && sub[1].items.length ? sub[1].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[1].price, sub[1].label, "grp-mat", { separator: true });
     const cableHtml = budgetGroupRows(sub[2].items && sub[2].items.length ? sub[2].items : [{ name: "—", qty: null }], budgetDetailNames, budgetDetailQty, sub[2].price, sub[2].label, "grp-mat");
-    const worksHtmlOrdered = budgetGroupRows(BUDGET_WORKS, (n) => n, () => 1, b.worksCost, "Роботи", "grp-works", { separator: true });
+    const worksHtmlOrdered = budgetGroupRows(worksRows, (it) => it.name, (it) => it.qty, b.worksCost, "Роботи", "grp-works", { separator: true });
 
     // Розбиття на сторінки (перероблено 2026-07-19 разом зі зміною порядку
     // й проханням Анни лишити примітки праворуч від таблиці, а не окремим
@@ -971,15 +991,18 @@
   }
 
   // Бюджет — та сама логіка/дані, що й pageBudget() вище (findBudgetEquipItems,
-  // budgetDetailSubsections/BUDGET_MATERIALS/BUDGET_WORKS, Розширений бюджет
-  // теж працює тут ідентично), просто БЕЗ повернутих на 90° підписів
-  // категорій — у документа немає обмеження ширини "слайду", тому категорія
-  // — звичайний виділений рядок-заголовок над своїми позиціями. Це заразом
-  // прибирає весь клас "обрізаної літери" багів, задокументованих для
-  // .budget-cat у kp_generator_status — тут цей підхід просто не потрібен.
+  // findBudgetWorksItems, budgetDetailSubsections/BUDGET_MATERIALS,
+  // Розширений бюджет теж працює тут ідентично), просто БЕЗ повернутих на
+  // 90° підписів категорій — у документа немає обмеження ширини "слайду",
+  // тому категорія — звичайний виділений рядок-заголовок над своїми
+  // позиціями. Це заразом прибирає весь клас "обрізаної літери" багів,
+  // задокументованих для .budget-cat у kp_generator_status — тут цей
+  // підхід просто не потрібен.
   function docBudgetTable(m) {
     const equip = findBudgetEquipItems(m.pdv);
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
+    const works = findBudgetWorksItems(m.pdv);
+    const worksRows = works.length ? works : [{ name: "—", qty: null }];
     const b = m.budget || {};
     const noVat = m.clientMode === "cash";
     const priceHeader = noVat ? "Вартість, $" : "Вартість без ПДВ, $";
@@ -1003,7 +1026,7 @@
     } else {
       body += catRow("Витратні матеріали", b.materialsCost) + itemRows(BUDGET_MATERIALS.map((n) => ({ name: n, qty: 1 })), (it) => it.name, (it) => it.qty);
     }
-    body += catRow("Роботи", b.worksCost) + itemRows(BUDGET_WORKS.map((n) => ({ name: n, qty: 1 })), (it) => it.name, (it) => it.qty);
+    body += catRow("Роботи", b.worksCost) + itemRows(worksRows, (it) => it.name, (it) => it.qty);
 
     const totalsHtml = noVat
       ? `<tr class="grand"><td colspan="2">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
