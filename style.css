@@ -421,6 +421,7 @@ table.budget-table .budget-cat{
   padding: 5px 4px;
   width: 38px;
   min-width: 38px;
+  height: 120px;
 }
 table.budget-table .budget-price{
   position: relative;
@@ -441,7 +442,7 @@ table.budget-table .budget-cat span{
   font-size:10px;
   letter-spacing:0;
 }
-table.budget-table .budget-cat.long{ width:66px; min-width:66px; }
+table.budget-table .budget-cat.long{ width:66px; min-width:66px; height:84px; }
 table.budget-table .budget-cat.long span{
   font-size:8px;
   line-height:1.2;
