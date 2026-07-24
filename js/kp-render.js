@@ -615,28 +615,42 @@
     return best;
   }
 
+  // "Розширений бюджет", варіант Б (запит Анни, 2026-07-24): підрозділ
+  // витратних матеріалів (AC/DC/Кабель) показуємо в "Бюджеті
+  // реалізації" ЛИШЕ якщо в ньому є позиції з Кошторису АБО є
+  // ціна (з вкладки ПДВ). Якщо і позицій нема, і ціна 0/порожня — підрозділ
+  // повністю ховаємо (а не рядок-заглушка "—", як раніше). Повертає:
+  // null — режим вимкнено; [] — усі три порожні; [..] — лише підрозділи, що лишились.
+  function budgetMaterialsForRender(m) {
+    const sub = budgetDetailSubsections(m);
+    if (!sub) return null;
+    return sub.filter((s) => {
+      const hasItems = s.items && s.items.length > 0;
+      const p = s.price;
+      const hasPrice = p != null && !isNaN(p) && Number(p) !== 0;
+      return hasItems || hasPrice;
+    });
+  }
+
   function buildBudgetSections(m, b) {
     const equip = findBudgetEquipItems(m.pdv);
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
     const works = findBudgetWorksItems(m.pdv);
     const worksRows = works.length ? works : [{ name: "—", qty: null }];
-    const sub = budgetDetailSubsections(m);
 
     const sections = [
       { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip", separator: false },
     ];
-    if (sub) {
-      const acItems = sub[0].items && sub[0].items.length ? sub[0].items : [{ name: "—", qty: null }];
-      const dcItems = sub[1].items && sub[1].items.length ? sub[1].items : [{ name: "—", qty: null }];
-      const cableItems = sub[2].items && sub[2].items.length ? sub[2].items : [{ name: "—", qty: null }];
-      sections.push({ items: acItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[0].price, label: sub[0].label, groupClass: "grp-mat", separator: true });
-      sections.push({ items: dcItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[1].price, label: sub[1].label, groupClass: "grp-mat", separator: true });
-      // ВИПРАВЛЕНО (2026-07-23, запит Анни): раніше тут стояло separator:
-      // false — межа DC/Кабельна лишалась без лінії, хоча обидва
-      // підрозділи мають однаковий фон (grp-mat), і межа між ними так само
-      // губилась, як колись губилась межа AC/DC (див. коментар над
-      // budgetGroupRows). Тепер лінія є на КОЖНІЙ межі підрозділів.
-      sections.push({ items: cableItems, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub[2].price, label: sub[2].label, groupClass: "grp-mat", separator: true });
+
+    // "Розширений бюджет", варіант Б (2026-07-24): kept === null — режим
+    // вимкнено; kept === [] — усі 3 підрозділи порожні; обидва
+    // випадки — фолбек на єдиний рядок "Витратні матеріали".
+    const kept = budgetMaterialsForRender(m);
+    if (kept && kept.length) {
+      kept.forEach((sub) => {
+        const items = sub.items && sub.items.length ? sub.items : [{ name: "—", qty: null }];
+        sections.push({ items, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub.price, label: sub.label, groupClass: "grp-mat", separator: true });
+      });
       sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", separator: true });
     } else {
       sections.push({ items: BUDGET_MATERIALS.map((n) => ({ name: n, qty: 1 })), nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.materialsCost, label: "Витратні матеріали", groupClass: "grp-mat", separator: false });
@@ -1204,9 +1218,9 @@
 
     let body = catRow("Обладнання", b.equipmentCost) + itemRows(equipRows, (it) => it.name, (it) => it.qty);
 
-    const sub = budgetDetailSubsections(m);
-    if (sub) {
-      sub.forEach((s) => {
+    const kept = budgetMaterialsForRender(m);
+    if (kept && kept.length) {
+      kept.forEach((s) => {
         const items = s.items && s.items.length ? s.items : [{ name: "—", qty: null }];
         body += catRow(s.label, s.price) + itemRows(items, budgetDetailNames, budgetDetailQty);
       });
