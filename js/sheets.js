@@ -455,49 +455,83 @@
   const KOSHTORYS_CABLE_RE = /кабельн\S*\s*продукц/iu;
   const KOSHTORYS_MATERIALS_RE = /витратн\S*\s*матеріал/iu;
 
-  // Знаходить індекс рядка, де КОЛОНКА A (перша) відповідає одному з
-  // регулярних виразів вище — так позначені рядки-заголовки підрозділів
-  // на вкладці "Кошторис_Наявність обладнання".
-  function findKoshtorysRowIndex(rows, re, fromIdx) {
+  // Визначає індекси колонок таблиці Кошторис ДИНАМІЧНО, за рядком-
+  // заголовком ("Тип товару | Найменування | Постачальник | Кіл-сть |
+  // Од.Вим | Ціна... | Вартість..."). ВИПРАВЛЕНО 2026-07-24: раніше
+  // індекси були жорстко зашиті (labelCol=0, name=2, qty=4, price=7) під
+  // конкретний варіант шаблону. Але менеджери додають/прибирають службові
+  // колонки зліва (напр. "№"), і будь-який зсув усе ламав: якщо посунути
+  // назви в потрібну колонку, разом з ними з'їжджали й заголовки
+  // підрозділів ("Захист АС/DC", "Кабельна продукція"), які шукались у
+  // колонці A. Тепер шукаємо позиції по самому заголовку — працює з будь-
+  // якою кількістю зайвих колонок зліва.
+  function findKoshtorysColumns(rows) {
+    for (let r = 0; r < Math.min(rows.length, 60); r++) {
+      const row = rows[r] || [];
+      let labelCol = -1, nameCol = -1, qtyCol = -1, priceCol = -1;
+      for (let c = 0; c < row.length; c++) {
+        const v = normForMatch(row[c]);
+        if (!v) continue;
+        if (labelCol < 0 && v.startsWith("тип товару")) labelCol = c;
+        if (nameCol < 0 && v.startsWith("найменування")) nameCol = c;
+        if (qtyCol < 0 && v.includes("кіл-сть")) qtyCol = c;
+        if (priceCol < 0 && v.startsWith("вартість")) priceCol = c;
+      }
+      if (nameCol >= 0 && priceCol >= 0) {
+        if (labelCol < 0) labelCol = Math.max(0, nameCol - 1);
+        if (qtyCol < 0) qtyCol = nameCol + 2;
+        return { labelCol, nameCol, qtyCol, priceCol, headerIdx: r };
+      }
+    }
+    return null;
+  }
+
+  // Знаходить індекс рядка, де КОЛОНКА-МІТКА (labelCol, визначена вище)
+  // відповідає одному з регулярних виразів — так позначені рядки-заголовки
+  // підрозділів на вкладці "Кошторис_Наявність обладнання".
+  function findKoshtorysRowIndex(rows, re, fromIdx, labelCol) {
     for (let r = fromIdx; r < rows.length; r++) {
-      const a = normForMatch(rows[r] && rows[r][0]);
+      const a = normForMatch(rows[r] && rows[r][labelCol]);
       if (a && re.test(a)) return r;
     }
     return -1;
   }
 
-  // Збирає комплектуючі (назва — колонка C, індекс 2; кількість — колонка
-  // E "Кіл-сть", індекс 4) у діапазоні рядків (fromIdx, toIdx) — межі не
-  // включаються (fromIdx — сам рядок-заголовок підрозділу, toIdx —
-  // рядок-заголовок НАСТУПНОГО підрозділу/межі). Пропускає рядки без назви
-  // АБО без ціни (колонка H, індекс 7) — тобто порожні рядки-заготовки з
-  // реального файлу (запит Анни, 2026-07-18: "строки без названия/цены или
-  // с $0 ... скрывать"). Індекси колонок оновлено 2026-07-23 (див. коментар
-  // над parseKoshtorysDetail вище — колонка "№" зсунула все на одну праворуч).
-  function collectKoshtorysItems(rows, fromIdx, toIdx) {
+  // Збирає комплектуючі (назва — cols.nameCol; кількість — cols.qtyCol;
+  // ціна/вартість — cols.priceCol) у діапазоні рядків (fromIdx, toIdx) —
+  // межі не включаються. Пропускає рядки без назви АБО без ціни/$0 —
+  // порожні рядки-заготовки з реального файлу (запит Анни, 2026-07-18:
+  // "строки без названия/цены или с $0 ... скрывать").
+  function collectKoshtorysItems(rows, fromIdx, toIdx, cols) {
     const items = [];
     if (fromIdx < 0 || toIdx < 0 || toIdx <= fromIdx) return items;
     for (let r = fromIdx + 1; r < toIdx; r++) {
       const row = rows[r] || [];
-      const name = (row[2] || "").toString().trim();
+      const name = (row[cols.nameCol] || "").toString().trim();
       if (!name) continue; // без назви — пропускаємо
-      const price = numeric(row[7]);
+      const price = numeric(row[cols.priceCol]);
       if (!price || price === 0) continue; // без ціни/$0 — пропускаємо (заготовка)
-      const qty = numeric(row[4]);
+      const qty = numeric(row[cols.qtyCol]);
       items.push({ name, qty: qty != null ? qty : null });
     }
     return items;
   }
 
   function parseKoshtorysDetail(rows) {
-    const acIdx = findKoshtorysRowIndex(rows, KOSHTORYS_AC_RE, 0);
-    const dcIdx = findKoshtorysRowIndex(rows, KOSHTORYS_DC_RE, acIdx >= 0 ? acIdx + 1 : 0);
-    const cableIdx = findKoshtorysRowIndex(rows, KOSHTORYS_CABLE_RE, dcIdx >= 0 ? dcIdx + 1 : 0);
-    const materialsIdx = findKoshtorysRowIndex(rows, KOSHTORYS_MATERIALS_RE, cableIdx >= 0 ? cableIdx + 1 : 0);
+    const cols = findKoshtorysColumns(rows);
+    if (!cols) {
+      console.warn("Розширений бюджет: не знайдено рядок-заголовок таблиці Кошторис (Тип товару/Найменування/Вартість) — деталізацію пропущено");
+      return { ac: [], dc: [], cable: [] };
+    }
+    const from = cols.headerIdx + 1;
+    const acIdx = findKoshtorysRowIndex(rows, KOSHTORYS_AC_RE, from, cols.labelCol);
+    const dcIdx = findKoshtorysRowIndex(rows, KOSHTORYS_DC_RE, acIdx >= 0 ? acIdx + 1 : from, cols.labelCol);
+    const cableIdx = findKoshtorysRowIndex(rows, KOSHTORYS_CABLE_RE, dcIdx >= 0 ? dcIdx + 1 : from, cols.labelCol);
+    const materialsIdx = findKoshtorysRowIndex(rows, KOSHTORYS_MATERIALS_RE, cableIdx >= 0 ? cableIdx + 1 : from, cols.labelCol);
     return {
-      ac: collectKoshtorysItems(rows, acIdx, dcIdx >= 0 ? dcIdx : acIdx + 30),
-      dc: collectKoshtorysItems(rows, dcIdx, cableIdx >= 0 ? cableIdx : (dcIdx >= 0 ? dcIdx + 30 : -1)),
-      cable: collectKoshtorysItems(rows, cableIdx, materialsIdx >= 0 ? materialsIdx : (cableIdx >= 0 ? cableIdx + 30 : -1)),
+      ac: collectKoshtorysItems(rows, acIdx, dcIdx >= 0 ? dcIdx : acIdx + 30, cols),
+      dc: collectKoshtorysItems(rows, dcIdx, cableIdx >= 0 ? cableIdx : (dcIdx >= 0 ? dcIdx + 30 : -1), cols),
+      cable: collectKoshtorysItems(rows, cableIdx, materialsIdx >= 0 ? materialsIdx : (cableIdx >= 0 ? cableIdx + 30 : -1), cols),
     };
   }
 
