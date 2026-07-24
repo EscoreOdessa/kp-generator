@@ -147,7 +147,7 @@
              замінює собою картку моделі гібридного інвертора (запит Анни,
              2026-07-07). -->
         <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність масиву фотомодулів</div></div>`}
-        <div class="stat-card"><div class="num">${m.accumulatorCapacityKwh != null ? fmtNum(m.accumulatorCapacityKwh, 2) : "—"} кВт·год</div><div class="lbl">Ємність акумуляторної групи</div></div>
+        ${m.accumulatorCapacityKwh != null && !isNaN(m.accumulatorCapacityKwh) ? `<div class="stat-card"><div class="num">${fmtNum(m.accumulatorCapacityKwh, 2)} кВт·год</div><div class="lbl">Ємність акумуляторної групи</div></div>` : ""}
       </div>
     </section>`;
   }
