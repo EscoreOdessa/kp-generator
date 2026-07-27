@@ -720,6 +720,24 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
 }
 .doc-manager b{ color:var(--ink); }
 
+/* ===== Режим ручного редагування (кнопка «Редагувати», запит Анни
+   2026-07-27) ===== Стилі підсвічування діють ЛИШЕ під .kp-editing, тож у
+   збереженому PDF (режим вимикається перед експортом у app.js) жодних
+   рамок не видно. Кнопка в активному стані стає суцільно-зеленою. */
+#btn-edit.active{ background: var(--green); color:#fff; border-color: var(--green); }
+.kp-editing [contenteditable="true"]{
+  outline: 1px dashed rgba(5,85,75,.45);
+  outline-offset: 1px;
+  border-radius: 2px;
+  cursor: text;
+}
+.kp-editing [contenteditable="true"]:hover{ background: rgba(5,85,75,.08); }
+.kp-editing [contenteditable="true"]:focus{
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+  background: rgba(5,85,75,.12);
+}
+
 @media print{
   *{
     -webkit-print-color-adjust: exact !important;
@@ -728,6 +746,7 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
   }
   body{ background:#fff; }
   .no-print{ display:none !important; }
+  .kp-editing [contenteditable]{ outline:none !important; background:none !important; }
   .kp-page{
     box-shadow:none;
     margin:0;
