@@ -710,6 +710,35 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
 .doc-img-wrap{ text-align:center; margin:4px 0 0; }
 .doc-img-wrap img{ max-width:100%; border-radius:8px; }
 .doc-img-wrap .cap{ font-size:12px; color:var(--text-muted); margin-top:8px; }
+
+/* Пояснювальна плашка під таблицею "Бюджет реалізації" (формат "Документ",
+   запит Анни 2026-07-27) — виділений блок у фірмовому зеленому із зеленими
+   маркерами-крапками. page-break-inside:avoid — щоб при друку блок не
+   розривався між сторінками. */
+.doc-budget-note{
+  margin:14px 0 0;
+  padding:14px 18px;
+  background: var(--tint);
+  border-left:4px solid var(--green);
+  border-radius:8px;
+  font-size:13.5px;
+  line-height:1.5;
+  color:var(--ink-2);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.doc-budget-note .dbn-intro{ margin:0 0 8px; font-weight:700; color:var(--green-dark); }
+.doc-budget-note .dbn-list{ list-style:none; margin:0 0 10px; padding:0; }
+.doc-budget-note .dbn-list li{ position:relative; padding-left:22px; margin:5px 0; }
+.doc-budget-note .dbn-list li::before{
+  content:"";
+  position:absolute; left:4px; top:0.42em;
+  width:9px; height:9px;
+  border-radius:50%;
+  background: var(--green);
+  box-shadow:0 0 0 3px var(--tint-2);
+}
+.doc-budget-note .dbn-pay{ margin:0; }
 .doc-manager{
   margin-top:12px;
   padding-top:16px;
