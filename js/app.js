@@ -30,10 +30,12 @@
 
   function editableLeaves(root) {
     return Array.from(root.querySelectorAll(EDIT_TARGET_SEL)).filter((el) => {
-      // Лише "листя" — елементи без вкладених елементів (тільки текст):
-      // так кожне окреме число/рядок редагується точково, без вкладених
-      // contenteditable один в одному.
-      if (el.children.length) return false;
+      // Лише "листя" — елементи, у яких із вкладених елементів хіба що <br>
+      // (перенос рядка). Так кожне окреме число/рядок редагується точково,
+      // без вкладених contenteditable один в одному, але заголовки з <br>
+      // (напр. .hero-title на 1-му слайді "Презентації": "... сонячна<br/>
+      // електростанція<br/>30 кВт") теж стають редагованими цілком.
+      if (Array.from(el.children).some((c) => c.tagName !== "BR")) return false;
       if (!el.textContent || !el.textContent.trim()) return false;
       // Ховані елементи форми всередині документа (напр. <select> вибору
       // місяця на сторінці "Фінансові показники") не чіпаємо.
