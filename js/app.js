@@ -11,6 +11,61 @@
     el.classList.toggle("error", !!isError);
   }
 
+  // ===== Ручне редагування КП (запит Анни, 2026-07-27) =====
+  // Кнопка "Редагувати" (#btn-edit) вмикає/вимикає режим правки: у ньому
+  // КОЖНЕ текстове поле (і число, і рядок) в обох форматах — "Презентація"
+  // і "Документ" — стає contenteditable, тож менеджер може вручну виправити
+  // будь-який запис перед друком. Нічого НЕ перераховується (домовленість
+  // з Анною 2026-07-27): правка — це чисте ручне перевизначення того, що
+  // показано; якщо треба змінити і залежну суму/підсумок — їх правлять
+  // окремо так само вручну. Поза режимом правки документ захищений від
+  // випадкових кліків (contenteditable знімається з УСІХ полів, зокрема із
+  // зашитих у розмітку kp-render.js таблиць бюджету/гарантії). PDF-експорт
+  // (і html2canvas для "Презентації", і window.print() для "Документа")
+  // малює живий DOM, тож ручні правки самі потрапляють у підсумковий файл;
+  // режим правки автоматично вимикається на старті експорту, щоб рамки
+  // підсвічування полів не потрапили в PDF.
+  const EDIT_TARGET_SEL =
+    "p,span,strong,em,b,i,td,th,li,h1,h2,h3,h4,h5,h6,small,figcaption,dt,dd,div,caption,a";
+
+  function editableLeaves(root) {
+    return Array.from(root.querySelectorAll(EDIT_TARGET_SEL)).filter((el) => {
+      // Лише "листя" — елементи без вкладених елементів (тільки текст):
+      // так кожне окреме число/рядок редагується точково, без вкладених
+      // contenteditable один в одному.
+      if (el.children.length) return false;
+      if (!el.textContent || !el.textContent.trim()) return false;
+      // Ховані елементи форми всередині документа (напр. <select> вибору
+      // місяця на сторінці "Фінансові показники") не чіпаємо.
+      if (el.closest(".no-print")) return false;
+      return true;
+    });
+  }
+
+  function isEditing() {
+    const d = document.getElementById("kp-doc");
+    return !!(d && d.classList.contains("kp-editing"));
+  }
+
+  function setEditMode(on) {
+    const doc = document.getElementById("kp-doc");
+    if (!doc) return;
+    doc.classList.toggle("kp-editing", !!on);
+    if (on) {
+      editableLeaves(doc).forEach((el) => el.setAttribute("contenteditable", "true"));
+    } else {
+      // Знімаємо редагування з усіх полів (зокрема зашитих у розмітці).
+      doc.querySelectorAll("[contenteditable]").forEach((el) =>
+        el.setAttribute("contenteditable", "false")
+      );
+    }
+    const btn = document.getElementById("btn-edit");
+    if (btn) {
+      btn.classList.toggle("active", !!on);
+      btn.textContent = on ? "✓ Завершити редагування" : "✏ Редагувати";
+    }
+  }
+
   // "Розділи КП" (запит Анни, 2026-07-20) — 4 чекбокси на формі
   // (index.html #in-sec-*), наразі впливають ЛИШЕ на формат "Документ"
   // (kp-render.js renderDocument() читає model.sections; формат
@@ -234,8 +289,14 @@
       } else {
         KpRender.render(model);
       }
+      // Щойно згенерований документ — показуємо кнопку "Редагувати" і
+      // приводимо його в захищений (нередагований) стан: setEditMode(false)
+      // знімає contenteditable, зашитий у розмітці kp-render.js.
+      const editBtn = document.getElementById("btn-edit");
+      if (editBtn) editBtn.style.display = "";
+      setEditMode(false);
       docHolder.scrollIntoView({ behavior: "smooth" });
-      setStatus("Готово. Перевірте документ нижче і натисніть «Друк / зберегти як PDF».");
+      setStatus("Готово. Перевірте документ нижче, за потреби натисніть «Редагувати», далі — «Друк / зберегти як PDF».");
     } catch (err) {
       console.error(err);
       setStatus(err.message || String(err), true);
@@ -286,6 +347,10 @@
   // kp_generator_document_mode_plan.
   async function handleSavePdfDocument(doc, btn) {
     btn.disabled = true;
+    // Вимикаємо режим правки перед друком, щоб рамки підсвічування
+    // редагованих полів не потрапили в PDF (самі ж правки лишаються — вони
+    // вже в DOM).
+    setEditMode(false);
     try {
       await waitForImages(doc);
       window.print();
@@ -318,6 +383,9 @@
       return;
     }
     btn.disabled = true;
+    // Вимикаємо режим правки перед знімком (рамки полів у PDF не потрібні;
+    // самі правки вже застосовані в DOM).
+    setEditMode(false);
     // Ховаємо елементи, які не мають потрапити на знімок (напр. <select>
     // вибору місяця на сторінці "Фінансові показники") — раніше це робив
     // клас .no-print через @media print, але html2canvas рендерить живий
@@ -409,6 +477,7 @@
   ready(() => {
     document.getElementById("btn-generate").addEventListener("click", handleGenerate);
     document.getElementById("btn-print").addEventListener("click", handleSavePdf);
+    document.getElementById("btn-edit").addEventListener("click", () => setEditMode(!isEditing()));
     wireSectionCheckboxes();
 
     document.getElementById("in-images").addEventListener("change", async (e) => {
