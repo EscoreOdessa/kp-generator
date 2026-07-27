@@ -173,6 +173,13 @@
       // над полем #in-no-panels в index.html. За замовчуванням (чекбокс
       // вимкнено) hasPanels = true, тобто нинішня поведінка не міняється.
       const hasPanels = !document.getElementById("in-no-panels").checked;
+      // "Заміри / Немає замірів" (запит Анни, 2026-07-27) — впливає лише на
+      // пояснювальну плашку під бюджетом у форматі "Документ" (kp-render.js
+      // docBudgetDisclaimer). "yes" (заміри вже зроблено) → лишається тільки
+      // рядок про оплату; "no" (за замовчуванням) → повний блок із переліком
+      // коригувань. Нинішню поведінку не змінює.
+      const measuredInput = document.querySelector('input[name="in-measured"]:checked');
+      const measured = measuredInput ? measuredInput.value === "yes" : false;
 
       setStatus("Читаємо Google Sheet...");
       const data = await KpSheets.loadCalcFromSheet(sheetUrl, mode, { budgetDetail: budgetDetailOn });
@@ -282,6 +289,7 @@
         clientMode: mode,
         sections,
         hasPanels,
+        measured,
       };
 
       const docHolder = document.getElementById("kp-doc");
