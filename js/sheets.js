@@ -517,22 +517,47 @@
     return items;
   }
 
-  function parseKoshtorysDetail(rows) {
+  // Парсер УСІХ груп вкладки "Кошторис_Наявність обладнання" (переписано
+  // 2026-07-27, запит Анни). РАНІШЕ тут було жорстко 3 підрозділи
+  // (AC/DC/Кабель) — через це блоки бюджету без цих назв (PV кабель,
+  // Заземлення, Витратні матеріали) губились. Тепер повертаємо ВСІ групи
+  // як масив [{label, items:[{name,qty}]}], а зіставлення з блоками бюджету
+  // (позиціями категорії "Кабельна група та витратні матеріали" вкладки
+  // ПДВ/Готівка_ФОП) робиться в kp-render.js за ЗБІГОМ НАЗВИ — назви груп у
+  // Кошторисі й блоків у ПДВ уніфіковані в шаблоні, тож збіг точний, без
+  // крихких регулярок.
+  //
+  // Колонка-мітка групи (cols.labelCol, "Тип товару") дублюється в кожному
+  // рядку своєї групи; рядок-заголовок групи — той, де назва (cols.nameCol)
+  // порожня або дорівнює мітці. Відстежуємо поточну групу: щойно значення
+  // labelCol змінюється — відкриваємо нову групу; рядки з реальною назвою й
+  // ненульовою ціною додаються як позиції поточної групи (стійко і до
+  // "розлитих" міток на кожному рядку, і до об'єднаних комірок, де мітка
+  // лише в першому рядку групи).
+  function parseKoshtorysGroups(rows) {
     const cols = findKoshtorysColumns(rows);
     if (!cols) {
       console.warn("Розширений бюджет: не знайдено рядок-заголовок таблиці Кошторис (Тип товару/Найменування/Вартість) — деталізацію пропущено");
-      return { ac: [], dc: [], cable: [] };
+      return null;
     }
-    const from = cols.headerIdx + 1;
-    const acIdx = findKoshtorysRowIndex(rows, KOSHTORYS_AC_RE, from, cols.labelCol);
-    const dcIdx = findKoshtorysRowIndex(rows, KOSHTORYS_DC_RE, acIdx >= 0 ? acIdx + 1 : from, cols.labelCol);
-    const cableIdx = findKoshtorysRowIndex(rows, KOSHTORYS_CABLE_RE, dcIdx >= 0 ? dcIdx + 1 : from, cols.labelCol);
-    const materialsIdx = findKoshtorysRowIndex(rows, KOSHTORYS_MATERIALS_RE, cableIdx >= 0 ? cableIdx + 1 : from, cols.labelCol);
-    return {
-      ac: collectKoshtorysItems(rows, acIdx, dcIdx >= 0 ? dcIdx : acIdx + 30, cols),
-      dc: collectKoshtorysItems(rows, dcIdx, cableIdx >= 0 ? cableIdx : (dcIdx >= 0 ? dcIdx + 30 : -1), cols),
-      cable: collectKoshtorysItems(rows, cableIdx, materialsIdx >= 0 ? materialsIdx : (cableIdx >= 0 ? cableIdx + 30 : -1), cols),
-    };
+    const groups = [];
+    let cur = null;
+    for (let r = cols.headerIdx + 1; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const labelRaw = (row[cols.labelCol] || "").toString().trim();
+      const name = (row[cols.nameCol] || "").toString().trim();
+      if (labelRaw && (!cur || normForMatch(labelRaw) !== normForMatch(cur.label))) {
+        cur = { label: labelRaw, items: [] };
+        groups.push(cur);
+      }
+      if (!cur || !name) continue;
+      if (normForMatch(name) === normForMatch(cur.label)) continue; // рядок-заголовок групи, не позиція
+      const price = numeric(row[cols.priceCol]);
+      if (!price || price === 0) continue; // порожня заготовка / без ціни — пропускаємо
+      const qty = numeric(row[cols.qtyCol]);
+      cur.items.push({ name, qty: qty != null ? qty : null });
+    }
+    return groups;
   }
 
   // Знаходить позицію в масиві items за ключовими словами в назві (та сама
@@ -674,13 +699,11 @@
     if (opts.budgetDetail) {
       try {
         const koshtRows = await fetchSheetValues(id, window.KP_CONFIG.SHEET_TAB_OBJECT_NAME);
-        const detailItems = parseKoshtorysDetail(koshtRows);
-        const detailPrices = findBudgetDetailPrices(pdv);
-        result.budgetDetail = {
-          ac: { items: detailItems.ac, price: detailPrices.acPrice },
-          dc: { items: detailItems.dc, price: detailPrices.dcPrice },
-          cable: { items: detailItems.cable, price: detailPrices.cablePrice },
-        };
+        // budgetDetail.groups — усі групи Кошторису як [{label, items}].
+        // Ціни блоків сюди НЕ кладемо: суми завжди беруться з ПДВ/Готівка_ФОП
+        // (позиції категорії "Кабельна група та витратні матеріали") у
+        // kp-render.js; Кошторис дає лише ПЕРЕЛІК комплектуючих на блок.
+        result.budgetDetail = { groups: parseKoshtorysGroups(koshtRows) };
       } catch (e) {
         console.warn("Розширений бюджет: не вдалось завантажити/розпарсити вкладку Кошторис (не критично):", e);
         result.budgetDetail = null;
@@ -692,7 +715,7 @@
   window.KpSheets = {
     loadCalcFromSheet, extractSpreadsheetId,
     parsePdvSheet, parseCashSheet, parseModelSheet, parseBudgetCells,
-    parseKoshtorysDetail, findBudgetDetailPrices,
+    parseKoshtorysGroups,
   };
 })();
 

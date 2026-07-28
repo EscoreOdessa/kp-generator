@@ -396,36 +396,26 @@
   // є завжди, порожня чи з числом — тож "дірки" в колонці ціни принципово
   // неможливі, незалежно від того, скільки разів і де саме розрізано
   // підрозділ.
-  function budgetGroupRows(items, getName, getQty, priceVal, catLabel, groupClass, opts) {
-    if (!items.length) return "";
-    opts = opts || {};
-    const showPrice = opts.showPrice !== false;
-    // Довгі підписи підрозділів (напр. "Автоматика захисту фотоелектричних
-    // модулів (постійний струм)" — з'явились разом із "Розширеним
-    // бюджетом", 2026-07-18) не влазять в один рядок повернутого на 90°
-    // тексту при короткому блоці рядків, як короткі "Обладнання"/"Роботи".
-    // Клас "long" вмикає менший шрифт + перенос рядків (див. style.css) —
-    // без цього текст просто вилазив би за межі мержованої комірки.
-    const catClass = "budget-cat" + (catLabel && catLabel.length > 20 ? " long" : "");
-    // opts.separator (запит Анни, 2026-07-19, після першого живого тесту) —
-    // додає товщу верхню лінію на першому рядку підрозділу: АС і DC мають
-    // однаковий колір фону (обидва grp-mat), тож без цього кордону межа між
-    // ними візуально губилась. Реалізовано як клас на <tr>, а не властивість
-    // .budget-cat — так лінія проходить через ВСІ комірки рядка (назва,
-    // кількість, і саму мержовану комірку категорії/ціни), суцільною через
-    // всю ширину таблиці.
-    return items.map((it, i) => {
-      const name = getName(it);
-      const qty = getQty(it);
-      const first = i === 0;
-      const rowClass = groupClass + (first && opts.separator ? " grp-sep" : "");
-      return `<tr class="${rowClass}">
-        ${first ? `<td class="${catClass}" rowspan="${items.length}"><span>${esc(catLabel)}</span></td>` : ""}
-        <td contenteditable="true">${esc(name)}</td>
-        <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
-        ${first ? `<td class="num budget-price" rowspan="${items.length}">${showPrice ? `<span contenteditable="true">${fmtUsd(priceVal)}</span>` : ""}</td>` : ""}
-      </tr>`;
-    }).join("");
+  // Рядок-підзаголовок блоку бюджету (горизонтальний — замінив стару
+  // вертикальну мержовану комірку .budget-cat, запит Анни 2026-07-27):
+  // назва блоку ліворуч (colspan 2) + ціна блоку праворуч (колонка
+  // "Вартість"). Колір фону — за групою (grp-equip / grp-mat / grp-works).
+  // Без rowspan — тож весь клас багів "білого стовпчика"/розірваного
+  // rowspan між сторінками більше неможливий.
+  function budgetHeaderRow(label, price, groupClass) {
+    return `<tr class="budget-cat-row ${groupClass}">
+      <td colspan="2" class="budget-cat" contenteditable="true">${esc(label)}</td>
+      <td class="num budget-price"><span contenteditable="true">${price != null ? fmtUsd(price) : ""}</span></td>
+    </tr>`;
+  }
+  // Рядок-позиція блоку: назва + кількість; колонка ціни порожня (ціна
+  // блоку — на його підзаголовку). Колір фону — за групою.
+  function budgetItemRow(name, qty, groupClass) {
+    return `<tr class="${groupClass}">
+      <td contenteditable="true">${esc(name)}</td>
+      <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
+      <td></td>
+    </tr>`;
   }
 
   // "Розширений бюджет" (запит Анни, 2026-07-18, обговорено окремо перед
@@ -446,14 +436,33 @@
   function budgetDetailNames(it) { return it.name; }
   function budgetDetailQty(it) { return it.qty; }
 
-  function budgetDetailSubsections(m) {
-    const detail = m.budgetDetail;
-    if (!detail) return null;
-    return [
-      { items: detail.ac && detail.ac.items, price: detail.ac && detail.ac.price, label: "Автоматика захисту змінного струму" },
-      { items: detail.dc && detail.dc.items, price: detail.dc && detail.dc.price, label: "Автоматика захисту фотоелектричних модулів" },
-      { items: detail.cable && detail.cable.items, price: detail.cable && detail.cable.price, label: "Кабельно-провідникова продукція" },
-    ];
+  // Нормалізація назви для зіставлення блоку бюджету (з ПДВ) із групою
+  // Кошторису — та сама філософія, що й normForMatch у sheets.js: нижній
+  // регістр, згорнуті пробіли, без лапок. Назви уніфіковані в шаблоні, тож
+  // збіг точний.
+  function budgetNorm(s) {
+    return String(s == null ? "" : s).toLowerCase().replace(/["'`]/g, "").replace(/\s+/g, " ").trim();
+  }
+  // Позиції середньої категорії бюджету ("Кабельна група та витратні
+  // матеріали") з вкладки ПДВ/Готівка_ФОП — КОЖНА стає окремим блоком
+  // (підзаголовок + ціна з ПДВ). Категорія — рівно наступна після
+  // "Основне обладнання". Службові рядки-нотатки (доставка "не робимо
+  // націнку") відкидаємо.
+  function findBudgetMaterialItems(pdv) {
+    const equipIdx = pdv.categories.findIndex((c) => {
+      const n = c.name.toLowerCase();
+      return n.includes("техн") && n.includes("облад");
+    });
+    const cat = equipIdx >= 0 ? pdv.categories[equipIdx + 1] : null;
+    if (!cat) return [];
+    return cat.items.filter((it) => !isStrayEquipNote(it.name) && (it.name || "").trim());
+  }
+  // Пошук групи Кошторису за назвою блоку (точний збіг нормалізованих назв).
+  // Якщо групи з такою назвою нема — блок покажемо лише з ціною (без переліку).
+  function findKoshtorysGroup(groups, blockName) {
+    if (!groups) return null;
+    const key = budgetNorm(blockName);
+    return groups.find((g) => budgetNorm(g.label) === key) || null;
   }
 
   // Винесено окремо (2026-07-23, разом з динамічною пагінацією нижче) —
@@ -462,7 +471,7 @@
   // таблиці з тим самим заголовком).
   function budgetTheadHtml(priceHeader) {
     return `<tr>
-        <th colspan="2">Найменування</th>
+        <th>Найменування</th>
         <th class="num">Кількість</th>
         <th class="num">${priceHeader}</th>
       </tr>`;
@@ -615,47 +624,46 @@
     return best;
   }
 
-  // "Розширений бюджет", варіант Б (запит Анни, 2026-07-24): підрозділ
-  // витратних матеріалів (AC/DC/Кабель) показуємо в "Бюджеті
-  // реалізації" ЛИШЕ якщо в ньому є позиції з Кошторису АБО є
-  // ціна (з вкладки ПДВ). Якщо і позицій нема, і ціна 0/порожня — підрозділ
-  // повністю ховаємо (а не рядок-заглушка "—", як раніше). Повертає:
-  // null — режим вимкнено; [] — усі три порожні; [..] — лише підрозділи, що лишились.
-  function budgetMaterialsForRender(m) {
-    const sub = budgetDetailSubsections(m);
-    if (!sub) return null;
-    return sub.filter((s) => {
-      const hasItems = s.items && s.items.length > 0;
-      const p = s.price;
-      const hasPrice = p != null && !isNaN(p) && Number(p) !== 0;
-      return hasItems || hasPrice;
-    });
-  }
-
+  // Будує блоки сторінки "Бюджет реалізації" (переписано 2026-07-27, запит
+  // Анни). Структура блоків ЗАВЖДИ однакова й береться з ПДВ/Готівка_ФОП:
+  //   • "Обладнання" — завжди перелік позицій (з ПДВ) + ціна блоку;
+  //   • середня категорія — КОЖНА позиція ПДВ ("PV кабель для підключення
+  //     фотомодулів", "Автоматика захисту змінного струму", "Автоматика
+  //     захисту фотоелектричних модулів", "Кабельно-провідникова
+  //     продукція", "Заземлення...", "Витратні матеріали") стає окремим
+  //     блоком: підзаголовок + ЦІНА З ПДВ. У РОЗШИРЕНОМУ режимі до блоку за
+  //     збігом назви підтягується перелік комплектуючих із Кошторису
+  //     (m.budgetDetail.groups); якщо групи з такою назвою нема — блок
+  //     лишається лише з ціною;
+  //   • "Роботи" — завжди перелік позицій (з ПДВ) + ціна блоку.
+  // У звичайному (не розширеному) режимі середні блоки — лише підзаголовок
+  // з ціною, без переліку.
   function buildBudgetSections(m, b) {
     const equip = findBudgetEquipItems(m.pdv);
     const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
     const works = findBudgetWorksItems(m.pdv);
     const worksRows = works.length ? works : [{ name: "—", qty: null }];
+    const materials = findBudgetMaterialItems(m.pdv);
+    const groups = m.budgetDetail && m.budgetDetail.groups; // null у звичайному режимі / при збої читання Кошторису
 
     const sections = [
-      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip", separator: false },
+      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip" },
     ];
 
-    // "Розширений бюджет", варіант Б (2026-07-24): kept === null — режим
-    // вимкнено; kept === [] — усі 3 підрозділи порожні; обидва
-    // випадки — фолбек на єдиний рядок "Витратні матеріали".
-    const kept = budgetMaterialsForRender(m);
-    if (kept && kept.length) {
-      kept.forEach((sub) => {
-        const items = sub.items && sub.items.length ? sub.items : [{ name: "—", qty: null }];
-        sections.push({ items, nameFn: budgetDetailNames, qtyFn: budgetDetailQty, price: sub.price, label: sub.label, groupClass: "grp-mat", separator: true });
+    materials.forEach((it) => {
+      const g = groups ? findKoshtorysGroup(groups, it.name) : null;
+      const detail = g && g.items && g.items.length ? g.items : null;
+      sections.push({
+        items: detail || [],
+        nameFn: budgetDetailNames,
+        qtyFn: budgetDetailQty,
+        price: it.lineNetto,
+        label: it.name,
+        groupClass: "grp-mat",
       });
-      sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", separator: true });
-    } else {
-      sections.push({ items: BUDGET_MATERIALS.map((n) => ({ name: n, qty: 1 })), nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.materialsCost, label: "Витратні матеріали", groupClass: "grp-mat", separator: false });
-      sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", separator: false });
-    }
+    });
+
+    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works" });
     return sections;
   }
 
@@ -665,71 +673,40 @@
       const availNarrow = measureAvailableHeight(m, false, priceHeader, host);
       const availWide = measureAvailableHeight(m, true, priceHeader, host);
 
+      // Плоский список рядків (переписано 2026-07-27 разом із
+      // горизонтальними підзаголовками): підзаголовок блоку + його позиції.
+      // Оскільки rowspan більше нема — рядки незалежні, і весь клас багів
+      // "білого стовпчика"/розірваного між сторінками rowspan відпадає.
+      const units = [];
+      sections.forEach((section) => {
+        units.push({ html: budgetHeaderRow(section.label, section.price, section.groupClass), header: true, hasItems: !!(section.items && section.items.length) });
+        (section.items || []).forEach((it) => {
+          units.push({ html: budgetItemRow(section.nameFn(it), section.qtyFn(it), section.groupClass), header: false });
+        });
+      });
+
       const pages = [{ wide: false, rowsHtml: "", usedHeight: 0, availableHeight: availNarrow }];
       const currentPage = () => pages[pages.length - 1];
       const startNewPage = () => { pages.push({ wide: true, rowsHtml: "", usedHeight: 0, availableHeight: availWide }); };
 
-      sections.forEach((section) => {
-        let remaining = section.items.slice();
-        let isFirstFragment = true;
-        let guard = 0;
-        while (remaining.length && guard++ < 60) {
-          const page = currentPage();
-          const freeHeight = page.availableHeight - page.usedHeight;
-          const fit = fitItemsToHeight(
-            remaining,
-            // ВИПРАВЛЕНО (2026-07-23, повторний звіт Анни): ціну показували
-            // лише на ОСТАННЬОМУ фрагменті підрозділу (isFinal), щоб не
-            // дублювати суму, якщо підрозділ розрізає між сторінками. На
-            // практиці це давало "порожню білу колонку" саме там, де читач
-            // найбільше очікує побачити ціну — біля перших позицій
-            // підрозділу, а сама ціна "спливала" лише на одній з наступних
-            // сторінок, далеко від переліку. Тепер ціна показується на
-            // ПЕРШОМУ фрагменті (isFirstFragment) — одразу видно вартість
-            // підрозділу, де б його не розрізало; жодного дублювання це не
-            // створює (кожен підрозділ фрагментується на кілька <tr>, але
-            // ціна — це один мержований <td> з rowspan, що належить рівно
-            // одному фрагменту).
-            (subset) => budgetGroupRows(
-              subset, section.nameFn, section.qtyFn,
-              isFirstFragment ? section.price : null,
-              section.label + (isFirstFragment ? "" : " (продовження)"),
-              section.groupClass,
-              { separator: section.separator && isFirstFragment, showPrice: isFirstFragment }
-            ),
-            freeHeight, page.wide, host
-          );
-          if (fit.k === 0) {
-            // Нічого не влазить у залишок поточної сторінки. Якщо сторінка
-            // взагалі порожня (usedHeight===0) і навіть ОДНА позиція не
-            // влазить у ЦІЛУ сторінку — це вже патологічний випадок
-            // (абсурдно довга назва), приймаємо перевищення для 1 позиції,
-            // щоб не зациклитись на порожніх сторінках.
-            if (page.usedHeight === 0) {
-              const forcedHtml = budgetGroupRows(
-                remaining.slice(0, 1), section.nameFn, section.qtyFn,
-                isFirstFragment ? section.price : null,
-                section.label + (isFirstFragment ? "" : " (продовження)"),
-                section.groupClass,
-                { separator: section.separator && isFirstFragment, showPrice: isFirstFragment }
-              );
-              page.rowsHtml += forcedHtml;
-              page.usedHeight += measureRowsHtml(forcedHtml, page.wide, host);
-              remaining = remaining.slice(1);
-              isFirstFragment = false;
-              if (remaining.length) startNewPage();
-              continue;
-            }
-            startNewPage();
-            continue;
-          }
-          page.rowsHtml += fit.html;
-          page.usedHeight += fit.height;
-          remaining = remaining.slice(fit.k);
-          isFirstFragment = false;
-          if (remaining.length) startNewPage();
+      for (let i = 0; i < units.length; i++) {
+        const u = units[i];
+        let page = currentPage();
+        // Не лишаємо підзаголовок блоку "сиротою" внизу сторінки: якщо у
+        // блоку є позиції — підзаголовок має влізти РАЗОМ хоча б із першою.
+        if (u.header && u.hasItems && i + 1 < units.length && page.rowsHtml) {
+          const together = measureRowsHtml(page.rowsHtml + u.html + units[i + 1].html, page.wide, host);
+          if (together > page.availableHeight) { startNewPage(); page = currentPage(); }
         }
-      });
+        let candH = measureRowsHtml(page.rowsHtml + u.html, page.wide, host);
+        if (candH > page.availableHeight && page.rowsHtml) {
+          startNewPage();
+          page = currentPage();
+          candH = measureRowsHtml(page.rowsHtml + u.html, page.wide, host);
+        }
+        page.rowsHtml += u.html;
+        page.usedHeight = candH;
+      }
 
       let page = currentPage();
       const freeHeight = page.availableHeight - page.usedHeight;
@@ -783,10 +760,10 @@
     // "sum-label", див. style.css) — тепер підпис починається точно під
     // колонкою "Найменування", як і просила Анна.
     const totalsHtml = noVat
-      ? `<tr class="sum grand"><td></td><td colspan="2" class="sum-label">Загальна вартість:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>`
-      : `<tr class="sum"><td></td><td colspan="2" class="sum-label">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
-            <tr class="sum"><td></td><td colspan="2" class="sum-label">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
-            <tr class="sum grand"><td></td><td colspan="2" class="sum-label">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
+      ? `<tr class="sum grand"><td colspan="2" class="sum-label">Загальна вартість:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>`
+      : `<tr class="sum"><td colspan="2" class="sum-label">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
+            <tr class="sum"><td colspan="2" class="sum-label">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
+            <tr class="sum grand"><td colspan="2" class="sum-label">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
 
     const sections = buildBudgetSections(m, b);
     return paginateBudgetSections(m, sections, priceHeader, totalsHtml);
@@ -1200,13 +1177,13 @@
   // задокументованих для .budget-cat у kp_generator_status — тут цей
   // підхід просто не потрібен.
   function docBudgetTable(m) {
-    const equip = findBudgetEquipItems(m.pdv);
-    const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
-    const works = findBudgetWorksItems(m.pdv);
-    const worksRows = works.length ? works : [{ name: "—", qty: null }];
     const b = m.budget || {};
     const noVat = m.clientMode === "cash";
     const priceHeader = noVat ? "Вартість, $" : "Вартість без ПДВ, $";
+    // Ті самі блоки, що й у "Презентації" (buildBudgetSections): Обладнання
+    // + кожна позиція середньої категорії ПДВ (з переліком із Кошторису в
+    // розширеному режимі, лише ціна — у звичайному) + Роботи.
+    const sections = buildBudgetSections(m, b);
 
     const catRow = (label, price) =>
       `<tr class="doc-cat-row"><td colspan="2">${esc(label)}</td><td class="num">${fmtUsd(price)}</td></tr>`;
@@ -1216,18 +1193,11 @@
         return `<tr><td>${esc(getName(it))}</td><td class="num">${q == null ? "—" : fmtNum(q)}</td><td></td></tr>`;
       }).join("");
 
-    let body = catRow("Обладнання", b.equipmentCost) + itemRows(equipRows, (it) => it.name, (it) => it.qty);
-
-    const kept = budgetMaterialsForRender(m);
-    if (kept && kept.length) {
-      kept.forEach((s) => {
-        const items = s.items && s.items.length ? s.items : [{ name: "—", qty: null }];
-        body += catRow(s.label, s.price) + itemRows(items, budgetDetailNames, budgetDetailQty);
-      });
-    } else {
-      body += catRow("Витратні матеріали", b.materialsCost) + itemRows(BUDGET_MATERIALS.map((n) => ({ name: n, qty: 1 })), (it) => it.name, (it) => it.qty);
-    }
-    body += catRow("Роботи", b.worksCost) + itemRows(worksRows, (it) => it.name, (it) => it.qty);
+    let body = "";
+    sections.forEach((sec) => {
+      body += catRow(sec.label, sec.price);
+      if (sec.items && sec.items.length) body += itemRows(sec.items, sec.nameFn, sec.qtyFn);
+    });
 
     const totalsHtml = noVat
       ? `<tr class="grand"><td colspan="2">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
