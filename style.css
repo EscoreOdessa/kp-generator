@@ -412,57 +412,27 @@ table.budget-table td{
 }
 table.budget-table td.num{ text-align:center; }
 table.budget-table tbody tr:last-child td{ border-bottom:none; }
-table.budget-table .budget-cat{
-  position: relative;
-  vertical-align: top;
-  text-align:center;
-  background: var(--green-dark);
-  border-bottom: none;
-  padding: 5px 4px;
-  width: 38px;
-  min-width: 38px;
-  height: 120px;
+/* Горизонтальний підзаголовок блоку бюджету (переверстано 2026-07-27,
+   запит Анни — замість старої вертикальної мержованої колонки .budget-cat,
+   поверненої на 90°): назва блоку ліворуч (colspan 2), ціна блоку праворуч
+   (колонка "Вартість"); верхня лінія відділяє блоки один від одного. */
+table.budget-table td.budget-cat{
+  text-align:left;
+  font-weight:800;
 }
+table.budget-table tr.budget-cat-row td{
+  border-top: 2px solid rgba(255,255,255,.42);
+  font-weight:800;
+}
+table.budget-table tr.budget-cat-row:first-child td{ border-top:none; }
 table.budget-table .budget-price{
-  position: relative;
-  vertical-align: top;
-  background: var(--green-dark);
-}
-table.budget-table .budget-cat span,
-table.budget-table .budget-price span{
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  white-space: nowrap;
-}
-table.budget-table .budget-cat span{
-  transform: translate(-50%, -50%) rotate(-90deg);
-  display:inline-block;
-  font-weight:800;
-  font-size:10px;
-  letter-spacing:0;
-}
-table.budget-table .budget-cat.long{ width:66px; min-width:66px; height:84px; }
-table.budget-table .budget-cat.long span{
-  font-size:8px;
-  line-height:1.2;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  width: 60px;
   text-align:center;
-  letter-spacing:0;
-}
-table.budget-table tr.grp-sep td{ border-top: 2px solid rgba(255,255,255,.55); }
-table.budget-table .budget-price span{
-  transform: translate(-50%, -50%);
   font-weight:800;
-  font-size:15.5px;
+  font-size:13.5px;
 }
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
 table.budget-table .grp-mat{ background: #4C7A72; }
-table.budget-table .grp-mat .budget-price{ background:#375D57; }
 table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13.5px; }
 table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; padding:6px 14px; }
 table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
