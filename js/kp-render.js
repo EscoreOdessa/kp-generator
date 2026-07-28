@@ -678,13 +678,19 @@
     ];
 
     materials.forEach((it) => {
+      // Плашку середнього блоку показуємо ЛИШЕ якщо в ПДВ/Готівка_ФОП у нього
+      // є ненульова сума (запит Анни, 2026-07-28: у режимі "С" на 3-й
+      // сторінці лишались порожні/нульові плашки — блоки без значення не
+      // показуємо взагалі).
+      const price = it.lineNetto;
+      if (!price || price === 0) return;
       const g = groups ? findKoshtorysGroup(groups, it.name) : null;
       const detail = g && g.items && g.items.length ? g.items : null;
       sections.push({
         items: detail || [],
         nameFn: budgetDetailNames,
         qtyFn: budgetDetailQty,
-        price: it.lineNetto,
+        price,
         label: it.name,
         groupClass: "grp-mat",
       });
