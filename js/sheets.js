@@ -544,18 +544,30 @@
     let cur = null;
     for (let r = cols.headerIdx + 1; r < rows.length; r++) {
       const row = rows[r] || [];
-      const labelRaw = (row[cols.labelCol] || "").toString().trim();
-      const name = (row[cols.nameCol] || "").toString().trim();
-      if (labelRaw && (!cur || normForMatch(labelRaw) !== normForMatch(cur.label))) {
-        cur = { label: labelRaw, items: [] };
+      const typ = (row[cols.labelCol] || "").toString().trim();   // колонка "Тип товару"
+      const name = (row[cols.nameCol] || "").toString().trim();   // колонка "Найменування"
+      // Рядок-ЗАГОЛОВОК блоку: "Тип товару" заповнено, а "Найменування"
+      // порожнє. Саме тут стоїть назва блоку (напр. "Автоматика захисту
+      // змінного струму"), яка збігається з назвою позиції середньої
+      // категорії вкладки ПДВ/Готівка_ФОП. Усі подальші рядки з непорожнім
+      // "Найменування" — комплектуючі ЦЬОГО блоку, навіть якщо в них своя
+      // (під)назва в "Тип товару" (реальні файли саме так і влаштовані —
+      // "Тип товару" на рядках-позиціях містить підтипи, а не назву блоку).
+      if (typ && !name) {
+        cur = { label: typ, items: [] };
         groups.push(cur);
+        continue;
       }
-      if (!cur || !name) continue;
-      if (normForMatch(name) === normForMatch(cur.label)) continue; // рядок-заголовок групи, не позиція
-      const price = numeric(row[cols.priceCol]);
-      if (!price || price === 0) continue; // порожня заготовка / без ціни — пропускаємо
-      const qty = numeric(row[cols.qtyCol]);
-      cur.items.push({ name, qty: qty != null ? qty : null });
+      // ПОЗИЦІЯ блоку: назва — з "Найменування", і ЛИШЕ якщо "Кіл-сть" не
+      // порожня (правило Анни, 2026-07-27). Ціну тут не читаємо — суми блоків
+      // завжди беруться з ПДВ/Готівка_ФОП, а з Кошторису — лише перелік назв.
+      if (cur && name) {
+        const qtyStr = (row[cols.qtyCol] == null ? "" : String(row[cols.qtyCol])).trim();
+        if (!qtyStr) continue; // порожня "Кіл-сть" — не показуємо
+        const qty = numeric(row[cols.qtyCol]);
+        if (qty == null || qty === 0) continue;
+        cur.items.push({ name, qty });
+      }
     }
     return groups;
   }
