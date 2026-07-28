@@ -404,17 +404,22 @@
   // rowspan між сторінками більше неможливий.
   function budgetHeaderRow(label, price, groupClass) {
     return `<tr class="budget-cat-row ${groupClass}">
-      <td colspan="2" class="budget-cat" contenteditable="true">${esc(label)}</td>
+      <td colspan="3" class="budget-cat" contenteditable="true">${esc(label)}</td>
       <td class="num budget-price"><span contenteditable="true">${price != null ? fmtUsd(price) : ""}</span></td>
     </tr>`;
   }
-  // Рядок-позиція блоку: назва + кількість; колонка ціни порожня (ціна
-  // блоку — на його підзаголовку). Колір фону — за групою.
-  function budgetItemRow(name, qty, groupClass) {
+  // Рядок-позиція блоку: назва + кількість + (лише для "Обладнання") ціна
+  // за одиницю та вартість позиції. Ціна за одиницю (unit, стовпець K
+  // вкладки ПДВ — "Ціна нетто без ПДВ за одиницю з націнкою") та вартість
+  // позиції (line, стовпець L — "Сума продажу нетто без ПДВ з націнкою")
+  // показуються ЛИШЕ в розділі "Обладнання" (запит менеджерів, 2026-07-27);
+  // в інших блоках ці комірки порожні, а сума блоку стоїть на підзаголовку.
+  function budgetItemRow(name, qty, unit, line, groupClass) {
     return `<tr class="${groupClass}">
       <td contenteditable="true">${esc(name)}</td>
       <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
-      <td></td>
+      <td class="num" contenteditable="true">${unit != null ? fmtUsd(unit) : ""}</td>
+      <td class="num" contenteditable="true">${line != null ? fmtUsd(line) : ""}</td>
     </tr>`;
   }
 
@@ -469,17 +474,18 @@
   // потрібен і тут (справжній рендер таблиці), і в measureAvailableHeight()
   // нижче (вимірювання "скільки місця лишається під рядки" на порожній
   // таблиці з тим самим заголовком).
-  function budgetTheadHtml(priceHeader) {
+  function budgetTheadHtml(priceHeader, unitHeader) {
     return `<tr>
         <th>Найменування</th>
         <th class="num">Кількість</th>
+        <th class="num">${unitHeader}</th>
         <th class="num">${priceHeader}</th>
       </tr>`;
   }
 
-  function budgetTable(bodyHtml, priceHeader, tfootHtml) {
+  function budgetTable(bodyHtml, priceHeader, unitHeader, tfootHtml) {
     return `<table class="budget-table">
-      <thead>${budgetTheadHtml(priceHeader)}</thead>
+      <thead>${budgetTheadHtml(priceHeader, unitHeader)}</thead>
       <tbody>${bodyHtml}</tbody>
       ${tfootHtml ? `<tfoot>${tfootHtml}</tfoot>` : ""}
     </table>`;
@@ -590,12 +596,12 @@
   // перекриття, щоб .budget-layout/.budget-table-wrap природно розтягнулись
   // через flex:1 (той самий механізм, що й у справжньому документі) і
   // читаємо їхню clientHeight — це і є "скільки місця під рядки лишається".
-  function measureAvailableHeight(m, wide, priceHeader, host) {
+  function measureAvailableHeight(m, wide, priceHeader, unitHeader, host) {
     const headerHtml = pageHeader(m.meta);
     const titleHtml = wide
       ? `<div class="section-title">Бюджет реалізації (продовження)</div>`
       : `<div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>`;
-    const theadHtml = `<thead>${budgetTheadHtml(priceHeader)}</thead>`;
+    const theadHtml = `<thead>${budgetTheadHtml(priceHeader, unitHeader)}</thead>`;
     const bodyHtml = wide
       ? `<div class="budget-table-wrap"><table class="budget-table">${theadHtml}<tbody></tbody></table></div>`
       : `<div class="budget-layout"><table class="budget-table">${theadHtml}<tbody></tbody></table>${budgetNotesAside({ detail: true })}</div>`;
@@ -647,7 +653,10 @@
     const groups = m.budgetDetail && m.budgetDetail.groups; // null у звичайному режимі / при збої читання Кошторису
 
     const sections = [
-      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip" },
+      // "Обладнання" — єдиний блок, де на КОЖНІЙ позиції показуємо ціну за
+      // одиницю (unitFn — стовпець K ПДВ, it.unitNetto) та вартість позиції
+      // (lineFn — стовпець L ПДВ, it.lineNetto) (запит менеджерів, 2026-07-27).
+      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, unitFn: (it) => it.unitNetto, lineFn: (it) => it.lineNetto, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip" },
     ];
 
     materials.forEach((it) => {
@@ -667,11 +676,11 @@
     return sections;
   }
 
-  function paginateBudgetSections(m, sections, priceHeader, totalsHtml) {
+  function paginateBudgetSections(m, sections, priceHeader, unitHeader, totalsHtml) {
     const host = getMeasureHost();
     try {
-      const availNarrow = measureAvailableHeight(m, false, priceHeader, host);
-      const availWide = measureAvailableHeight(m, true, priceHeader, host);
+      const availNarrow = measureAvailableHeight(m, false, priceHeader, unitHeader, host);
+      const availWide = measureAvailableHeight(m, true, priceHeader, unitHeader, host);
 
       // Плоский список рядків (переписано 2026-07-27 разом із
       // горизонтальними підзаголовками): підзаголовок блоку + його позиції.
@@ -681,7 +690,9 @@
       sections.forEach((section) => {
         units.push({ html: budgetHeaderRow(section.label, section.price, section.groupClass), header: true, hasItems: !!(section.items && section.items.length) });
         (section.items || []).forEach((it) => {
-          units.push({ html: budgetItemRow(section.nameFn(it), section.qtyFn(it), section.groupClass), header: false });
+          const unit = section.unitFn ? section.unitFn(it) : null;
+          const line = section.lineFn ? section.lineFn(it) : null;
+          units.push({ html: budgetItemRow(section.nameFn(it), section.qtyFn(it), unit, line, section.groupClass), header: false });
         });
       });
 
@@ -724,7 +735,7 @@
             ${pageHeader(m.meta)}
             <div class="section-title"><span class="num-badge">03</span> Бюджет реалізації</div>
             <div class="budget-layout">
-              ${budgetTable(p.rowsHtml, priceHeader, p.totalsHtml || null)}
+              ${budgetTable(p.rowsHtml, priceHeader, unitHeader, p.totalsHtml || null)}
               ${budgetNotesAside({ detail: true })}
             </div>
           </section>`;
@@ -734,7 +745,7 @@
           ${pageHeader(m.meta)}
           <div class="section-title">Бюджет реалізації (продовження)</div>
           <div class="budget-table-wrap">
-            ${budgetTable(p.rowsHtml, priceHeader, p.totalsHtml || null)}
+            ${budgetTable(p.rowsHtml, priceHeader, unitHeader, p.totalsHtml || null)}
           </div>
         </section>`;
       }).join("");
@@ -749,6 +760,9 @@
     // податку, ані слово "ПДВ" в підписах підсумку/шапки таблиці взагалі.
     const noVat = m.clientMode === "cash";
     const priceHeader = noVat ? "Вартість, $" : "Вартість<br/>без ПДВ, $";
+    // Нова колонка "Ціна без ПДВ, $" — ціна за одиницю (стовпець K ПДВ),
+    // заповнюється лише в розділі "Обладнання" (запит менеджерів 2026-07-27).
+    const unitHeader = noVat ? "Ціна, $" : "Ціна<br/>без ПДВ, $";
     // Підписи підсумків (запит Анни, 2026-07-19): раніше `colspan="3"`
     // об'єднував і мержовану колонку категорії (де, наприклад, і так уже
     // стоїть вертикальна назва останнього підрозділу над цим рядком), тому
@@ -760,13 +774,13 @@
     // "sum-label", див. style.css) — тепер підпис починається точно під
     // колонкою "Найменування", як і просила Анна.
     const totalsHtml = noVat
-      ? `<tr class="sum grand"><td colspan="2" class="sum-label">Загальна вартість:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>`
-      : `<tr class="sum"><td colspan="2" class="sum-label">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
-            <tr class="sum"><td colspan="2" class="sum-label">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
-            <tr class="sum grand"><td colspan="2" class="sum-label">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
+      ? `<tr class="sum grand"><td colspan="3" class="sum-label">Загальна вартість:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>`
+      : `<tr class="sum"><td colspan="3" class="sum-label">Разом без ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.nettoTotal)}</td></tr>
+            <tr class="sum"><td colspan="3" class="sum-label">ПДВ</td><td class="num" contenteditable="true">${fmtUsd(b.vat)}</td></tr>
+            <tr class="sum grand"><td colspan="3" class="sum-label">Загальна вартість з ПДВ:</td><td class="num" contenteditable="true">${fmtUsd(b.grossTotal)}</td></tr>`;
 
     const sections = buildBudgetSections(m, b);
-    return paginateBudgetSections(m, sections, priceHeader, totalsHtml);
+    return paginateBudgetSections(m, sections, priceHeader, unitHeader, totalsHtml);
   }
 
   // ---------- Сторінка 04 — імітаційна модель СЕС (PvSyst) ----------
@@ -1180,33 +1194,37 @@
     const b = m.budget || {};
     const noVat = m.clientMode === "cash";
     const priceHeader = noVat ? "Вартість, $" : "Вартість без ПДВ, $";
+    const unitHeader = noVat ? "Ціна, $" : "Ціна без ПДВ, $";
     // Ті самі блоки, що й у "Презентації" (buildBudgetSections): Обладнання
     // + кожна позиція середньої категорії ПДВ (з переліком із Кошторису в
-    // розширеному режимі, лише ціна — у звичайному) + Роботи.
+    // розширеному режимі, лише ціна — у звичайному) + Роботи. Колонка "Ціна
+    // без ПДВ, $" (ціна за одиницю) заповнюється лише в "Обладнанні".
     const sections = buildBudgetSections(m, b);
 
     const catRow = (label, price) =>
-      `<tr class="doc-cat-row"><td colspan="2">${esc(label)}</td><td class="num">${fmtUsd(price)}</td></tr>`;
-    const itemRows = (items, getName, getQty) =>
+      `<tr class="doc-cat-row"><td colspan="3">${esc(label)}</td><td class="num">${fmtUsd(price)}</td></tr>`;
+    const itemRows = (items, getName, getQty, getUnit, getLine) =>
       items.map((it) => {
         const q = getQty(it);
-        return `<tr><td>${esc(getName(it))}</td><td class="num">${q == null ? "—" : fmtNum(q)}</td><td></td></tr>`;
+        const u = getUnit ? getUnit(it) : null;
+        const l = getLine ? getLine(it) : null;
+        return `<tr><td>${esc(getName(it))}</td><td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsd(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
 
     let body = "";
     sections.forEach((sec) => {
       body += catRow(sec.label, sec.price);
-      if (sec.items && sec.items.length) body += itemRows(sec.items, sec.nameFn, sec.qtyFn);
+      if (sec.items && sec.items.length) body += itemRows(sec.items, sec.nameFn, sec.qtyFn, sec.unitFn, sec.lineFn);
     });
 
     const totalsHtml = noVat
-      ? `<tr class="grand"><td colspan="2">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
-      : `<tr><td colspan="2">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
-         <tr><td colspan="2">ПДВ</td><td class="num">${fmtUsd(b.vat)}</td></tr>
-         <tr class="grand"><td colspan="2">Загальна вартість з ПДВ:</td><td class="num">${fmtUsd(b.grossTotal)}</td></tr>`;
+      ? `<tr class="grand"><td colspan="3">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
+      : `<tr><td colspan="3">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
+         <tr><td colspan="3">ПДВ</td><td class="num">${fmtUsd(b.vat)}</td></tr>
+         <tr class="grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num">${fmtUsd(b.grossTotal)}</td></tr>`;
 
     return docTable(
-      [{ label: "Найменування" }, { label: "Кількість", num: true }, { label: priceHeader, num: true }],
+      [{ label: "Найменування" }, { label: "Кількість", num: true }, { label: unitHeader, num: true }, { label: priceHeader, num: true }],
       body,
       totalsHtml
     ) + docBudgetDisclaimer(m);
