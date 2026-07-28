@@ -451,8 +451,8 @@
     if (!detail) return null;
     return [
       { items: detail.ac && detail.ac.items, price: detail.ac && detail.ac.price, label: "Автоматика захисту змінного струму" },
-      { items: detail.dc && detail.dc.items, price: detail.dc && detail.dc.price, label: "Автоматика захисту фотоелектричних модулів (постійний струм)" },
-      { items: detail.cable && detail.cable.items, price: detail.cable && detail.cable.price, label: "Кабельно-провідникова продукція + конектори МС4" },
+      { items: detail.dc && detail.dc.items, price: detail.dc && detail.dc.price, label: "Автоматика захисту фотоелектричних модулів" },
+      { items: detail.cable && detail.cable.items, price: detail.cable && detail.cable.price, label: "Кабельно-провідникова продукція" },
     ];
   }
 
