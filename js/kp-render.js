@@ -591,6 +591,11 @@
     return host.querySelector("table.budget-table").offsetHeight;
   }
 
+  // Однаковий нижній відступ під таблицею бюджету на КОЖНІЙ сторінці — щоб
+  // останній рядок не впирався в самий низ і не обрізався (запит Анни,
+  // 2026-07-28).
+  const BUDGET_PAGE_BOTTOM_GAP = 16;
+
   // Реальна доступна висота під таблицю на сторінці бюджету — рендеримо
   // справжню структуру сторінки (заголовок+назва+обгортка) БЕЗ height:auto
   // перекриття, щоб .budget-layout/.budget-table-wrap природно розтягнулись
@@ -607,7 +612,20 @@
       : `<div class="budget-layout"><table class="budget-table">${theadHtml}<tbody></tbody></table>${budgetNotesAside({ detail: true })}</div>`;
     host.innerHTML = `<section class="kp-page budget-page">${headerHtml}${titleHtml}${bodyHtml}</section>`;
     const wrap = host.querySelector(wide ? ".budget-table-wrap" : ".budget-layout");
-    return wrap.clientHeight;
+    // wrap.clientHeight — це ПОВНА область під таблицю (контейнер), але шапка
+    // (thead) стоїть ВСЕРЕДИНІ таблиці й теж займає місце. measureRowsHtml
+    // нижче міряє лише рядки <tbody> (без шапки), тож якщо не відняти висоту
+    // шапки — пагінатор думає, що має на цілу шапку більше місця, і кладе
+    // зайвий рядок, який вилазить за низ сторінки (overflow:hidden на
+    // .budget-page обрізає його). Стало помітно після додавання 4-ї колонки:
+    // заголовки "Ціна/Вартість без ПДВ, $" переносяться у 2 рядки, і шапка
+    // на вузькій 1-й сторінці ~55px (запит Анни, 2026-07-28: "перший лист без
+    // нижнього поля, з'їдається рядок"). Додатково лишаємо однаковий нижній
+    // відступ BUDGET_PAGE_BOTTOM_GAP на КОЖНІЙ сторінці — щоб рядки не
+    // впиралися в самий низ і нижнє поле було консистентним між сторінками.
+    const thead = host.querySelector("table.budget-table thead");
+    const theadH = thead ? thead.offsetHeight : 0;
+    return wrap.clientHeight - theadH - BUDGET_PAGE_BOTTOM_GAP;
   }
 
   // Найбільша к-сть позицій із початку items, чий рендер (buildHtmlFn)
