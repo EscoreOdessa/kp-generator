@@ -433,6 +433,13 @@ table.budget-table .budget-price{
 table.budget-table .grp-equip{ background: var(--green); }
 table.budget-table .grp-works{ background: var(--green); }
 table.budget-table .grp-mat{ background: #4C7A72; }
+/* Виділення підзаголовків блоків (запит менеджерів, 2026-07-27): рядок-
+   підзаголовок помітно темніший за свої позиції — так назва блоку чітко
+   відділяється від переліку. Разом із жирним шрифтом і верхньою лінією
+   (вище) блок читається одразу. */
+table.budget-table tr.budget-cat-row.grp-equip td,
+table.budget-table tr.budget-cat-row.grp-works td{ background: var(--green-dark); }
+table.budget-table tr.budget-cat-row.grp-mat td{ background: #375D57; }
 table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13.5px; }
 table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; padding:6px 14px; }
 table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
@@ -662,10 +669,13 @@ table.doc-table td{
 table.doc-table td.num{ text-align:right; white-space:nowrap; }
 table.doc-table tr{ page-break-inside: avoid; }
 table.doc-table tbody tr:last-child td{ border-bottom:none; }
+/* Підзаголовки блоків у "Документі" виділяємо фірмовою зеленою плашкою з
+   білим текстом (запит менеджерів, 2026-07-27) — щоб назва блоку чітко
+   відділялася від переліку позицій. */
 table.doc-table tr.doc-cat-row td{
-  background: var(--tint-2);
+  background: var(--green);
   font-weight:700;
-  color:var(--green-dark);
+  color:#fff;
   border-bottom:1px solid var(--line);
 }
 table.doc-table.doc-kv td:first-child{ color:var(--text-muted); }
