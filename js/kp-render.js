@@ -104,6 +104,24 @@
   // "перетікав" на сторінку без заголовка.
   function pageCover(m) {
     const hero = m.images[0];
+    // Картки-показники (запит Анни, 2026-07-28): показуємо ЛИШЕ ті, де є
+    // реальне значення — картки з "—"/0 (напр. інверторна група чи ємність
+    // акумуляторів, коли їх нема у файлі) не виводимо взагалі. Кількість
+    // колонок сітки = кількості карток (cols-1..4, див. style.css).
+    const cards = [];
+    if (m.tech.stationCapacityKw || m.tech.invertersQty) {
+      cards.push(`<div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність інверторної групи, ${m.tech.invertersQty || "—"} шт</div></div>`);
+    }
+    if (m.hasPanels !== false && m.tech.panelsQty) {
+      cards.push(`<div class="stat-card"><div class="num">${fmtNum(m.tech.panelsQty)} шт</div><div class="lbl">Сонячні панелі</div></div>`);
+    }
+    if (m.hasPanels !== false && m.model.capacityKw) {
+      cards.push(`<div class="stat-card"><div class="num">${fmtNum(m.model.capacityKw, 2)} кВт</div><div class="lbl">Потужність масиву фотомодулів</div></div>`);
+    }
+    if (m.accumulatorCapacityKwh != null && !isNaN(m.accumulatorCapacityKwh) && Number(m.accumulatorCapacityKwh) !== 0) {
+      cards.push(`<div class="stat-card"><div class="num">${fmtNum(m.accumulatorCapacityKwh, 2)} кВт·год</div><div class="lbl">Ємність акумуляторної групи</div></div>`);
+    }
+    const statCardsHtml = cards.length ? `<div class="stat-cards cols-${cards.length}">${cards.join("")}</div>` : "";
     return `
     <section class="kp-page cover-page">
       ${pageHeader(m.meta, "cover")}
@@ -137,18 +155,7 @@
            розрахунку (L39 на вкладці ПДВ / O40 на вкладці Готівка_ФОП,
            залежно від режиму — див. sheets.js parseAccumulatorCapacityKwh),
            а не з назви позиції в номенклатурі. -->
-      <div class="stat-cards${m.hasPanels === false ? " cols-2" : ""}">
-        <div class="stat-card"><div class="num">${m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність інверторної групи, ${m.tech.invertersQty || "—"} шт</div></div>
-        ${m.hasPanels === false ? "" : `<div class="stat-card"><div class="num">${m.tech.panelsQty || "—"} шт</div><div class="lbl">Сонячні панелі</div></div>
-        <!-- Потужність масиву фотомодулів — комірка B3 вкладки "Моделювання
-             Фін. показників роботи СЕС" (підпис "Потужність СЕС" у сусідній
-             комірці A3). Беремо вже готове значення m.model.capacityKw, яке
-             парситься саме з цієї комірки в sheets.js (parseModelSheet) —
-             замінює собою картку моделі гібридного інвертора (запит Анни,
-             2026-07-07). -->
-        <div class="stat-card"><div class="num">${m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) : "—"} кВт</div><div class="lbl">Потужність масиву фотомодулів</div></div>`}
-        ${m.accumulatorCapacityKwh != null && !isNaN(m.accumulatorCapacityKwh) ? `<div class="stat-card"><div class="num">${fmtNum(m.accumulatorCapacityKwh, 2)} кВт·год</div><div class="lbl">Ємність акумуляторної групи</div></div>` : ""}
-      </div>
+      ${statCardsHtml}
     </section>`;
   }
 
