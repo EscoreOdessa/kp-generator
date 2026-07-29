@@ -10,6 +10,16 @@
 (function () {
   const fmtUsd = (n) =>
     n === null || n === undefined || isNaN(n) ? "—" : "$" + Math.round(n).toLocaleString("en-US");
+  // Формат ціни за одиницю в бюджеті (запит Анни, 2026-07-30): зазвичай цілі
+  // долари, як і всюди (fmtUsd). АЛЕ після рознесення доставки ціна за
+  // одиницю = Вартість / Кількість може стати ДРОБОВОЮ — тоді показуємо з
+  // копійками (2 знаки), щоб "Кількість × Ціна = Вартість" сходилось. Для
+  // позицій, де ціна ціла (доставки немає або ділиться націло), вигляд не
+  // змінюється.
+  const fmtUsdCents = (n) =>
+    n === null || n === undefined || isNaN(n) ? "—" : "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtUsdSmart = (n) =>
+    n === null || n === undefined || isNaN(n) ? "—" : (Number.isInteger(Math.round(Number(n) * 100) / 100) ? fmtUsd(n) : fmtUsdCents(n));
   const fmtNum = (n, d = 0) =>
     n === null || n === undefined || isNaN(n) ? "—" : Number(n).toLocaleString("uk-UA", { maximumFractionDigits: d });
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -457,7 +467,7 @@
     return `<tr class="${groupClass}">
       <td contenteditable="true">${esc(name)}</td>
       <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
-      <td class="num" contenteditable="true">${unit != null ? fmtUsd(unit) : ""}</td>
+      <td class="num" contenteditable="true">${unit != null ? fmtUsdSmart(unit) : ""}</td>
       <td class="num" contenteditable="true">${line != null ? fmtUsd(line) : ""}</td>
     </tr>`;
   }
@@ -1319,7 +1329,7 @@
         const u = sec.unitFn ? sec.unitFn(it) : null;
         const l = sec.lineFn ? sec.lineFn(it) : null;
         const umCell = withUM ? `<td>${esc(measureOf(sec, it))}</td>` : "";
-        return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsd(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
+        return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsdSmart(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
 
     let body = "";
