@@ -677,11 +677,28 @@
     const materials = findBudgetMaterialItems(m.pdv);
     const groups = m.budgetDetail && m.budgetDetail.groups; // null у звичайному режимі / при збої читання Кошторису
 
+    // "Од. виміру" на рівні категорії (запит Анни, 2026-07-29) — одиниця з
+    // рядка-заголовка категорії ПДВ/Готівка_ФОП (sheets.js зберіг її як
+    // cat.unitMeasure). Для "Обладнання" й "Роботи" це і є одиниця, яку
+    // показує колонка "Од. виміру" у форматі "Документ з малюнками". Для
+    // середніх підрозділів одиниця береться пер-позиційно з Кошторису
+    // (it.unit), тож matUnit — лише запасний варіант, якщо в позиції Кошторису
+    // одиниці нема.
+    const cats = m.pdv.categories || [];
+    const equipIdx = cats.findIndex((c) => {
+      const n = c.name.toLowerCase();
+      return n.includes("техн") && n.includes("облад");
+    });
+    const catUnit = (i) => (i >= 0 && cats[i] ? (cats[i].unitMeasure || "") : "");
+    const equipUnit = catUnit(equipIdx);
+    const matUnit = catUnit(equipIdx >= 0 ? equipIdx + 1 : -1);
+    const worksUnit = catUnit(equipIdx >= 0 ? equipIdx + 2 : -1);
+
     const sections = [
       // "Обладнання" — єдиний блок, де на КОЖНІЙ позиції показуємо ціну за
       // одиницю (unitFn — стовпець K ПДВ, it.unitNetto) та вартість позиції
       // (lineFn — стовпець L ПДВ, it.lineNetto) (запит менеджерів, 2026-07-27).
-      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, unitFn: (it) => it.unitNetto, lineFn: (it) => it.lineNetto, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip" },
+      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, unitFn: (it) => it.unitNetto, lineFn: (it) => it.lineNetto, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip", unitMeasure: equipUnit },
     ];
 
     materials.forEach((it) => {
@@ -700,10 +717,11 @@
         price,
         label: it.name,
         groupClass: "grp-mat",
+        unitMeasure: matUnit, // запасний варіант; основне джерело — it.unit з Кошторису
       });
     });
 
-    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works" });
+    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", unitMeasure: worksUnit });
     return sections;
   }
 
@@ -1221,7 +1239,16 @@
   // позиціями. Це заразом прибирає весь клас "обрізаної літери" багів,
   // задокументованих для .budget-cat у kp_generator_status — тут цей
   // підхід просто не потрібен.
-  function docBudgetTable(m) {
+  // opts.withUnitMeasure (запит Анни, 2026-07-29, лише формат "Документ з
+  // малюнками") — додає колонку "Од. виміру" між "Найменування" та
+  // "Кількість". Значення: для позицій "Обладнання"/"Роботи" — одиниця з
+  // рівня категорії ПДВ/Готівка_ФОП (sec.unitMeasure); для позицій середніх
+  // підрозділів — пер-позиційна одиниця з Кошторису (it.unit), з відкатом на
+  // sec.unitMeasure. У звичайному "Документі" (withUnitMeasure=false) таблиця
+  // лишається 1:1 як була.
+  function docBudgetTable(m, opts) {
+    opts = opts || {};
+    const withUM = !!opts.withUnitMeasure;
     const b = m.budget || {};
     const noVat = m.clientMode === "cash";
     const priceHeader = noVat ? "Вартість, $" : "Вартість без ПДВ, $";
@@ -1232,33 +1259,41 @@
     // без ПДВ, $" (ціна за одиницю) заповнюється лише в "Обладнанні".
     const sections = buildBudgetSections(m, b);
 
+    // К-сть комірок, які перекриває підзаголовок блоку (усе, окрім останньої
+    // колонки "Вартість"): Найменування [+ Од. виміру] + Кількість + Ціна.
+    const catSpan = withUM ? 4 : 3;
+    const measureOf = (sec, it) => {
+      const own = it && it.unit != null ? String(it.unit).trim() : "";
+      return own || sec.unitMeasure || "";
+    };
     const catRow = (label, price) =>
-      `<tr class="doc-cat-row"><td colspan="3">${esc(label)}</td><td class="num">${fmtUsd(price)}</td></tr>`;
-    const itemRows = (items, getName, getQty, getUnit, getLine) =>
-      items.map((it) => {
-        const q = getQty(it);
-        const u = getUnit ? getUnit(it) : null;
-        const l = getLine ? getLine(it) : null;
-        return `<tr><td>${esc(getName(it))}</td><td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsd(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
+      `<tr class="doc-cat-row"><td colspan="${catSpan}">${esc(label)}</td><td class="num">${fmtUsd(price)}</td></tr>`;
+    const itemRows = (sec) =>
+      sec.items.map((it) => {
+        const q = sec.qtyFn(it);
+        const u = sec.unitFn ? sec.unitFn(it) : null;
+        const l = sec.lineFn ? sec.lineFn(it) : null;
+        const umCell = withUM ? `<td>${esc(measureOf(sec, it))}</td>` : "";
+        return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsd(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
 
     let body = "";
     sections.forEach((sec) => {
       body += catRow(sec.label, sec.price);
-      if (sec.items && sec.items.length) body += itemRows(sec.items, sec.nameFn, sec.qtyFn, sec.unitFn, sec.lineFn);
+      if (sec.items && sec.items.length) body += itemRows(sec);
     });
 
     const totalsHtml = noVat
-      ? `<tr class="grand"><td colspan="3">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
-      : `<tr><td colspan="3">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
-         <tr><td colspan="3">ПДВ</td><td class="num">${fmtUsd(b.vat)}</td></tr>
-         <tr class="grand"><td colspan="3">Загальна вартість з ПДВ:</td><td class="num">${fmtUsd(b.grossTotal)}</td></tr>`;
+      ? `<tr class="grand"><td colspan="${catSpan}">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
+      : `<tr><td colspan="${catSpan}">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
+         <tr><td colspan="${catSpan}">ПДВ</td><td class="num">${fmtUsd(b.vat)}</td></tr>
+         <tr class="grand"><td colspan="${catSpan}">Загальна вартість з ПДВ:</td><td class="num">${fmtUsd(b.grossTotal)}</td></tr>`;
 
-    return docTable(
-      [{ label: "Найменування" }, { label: "Кількість", num: true }, { label: unitHeader, num: true }, { label: priceHeader, num: true }],
-      body,
-      totalsHtml
-    ) + docBudgetDisclaimer(m);
+    const head = withUM
+      ? [{ label: "Найменування" }, { label: "Од. виміру" }, { label: "Кількість", num: true }, { label: unitHeader, num: true }, { label: priceHeader, num: true }]
+      : [{ label: "Найменування" }, { label: "Кількість", num: true }, { label: unitHeader, num: true }, { label: priceHeader, num: true }];
+
+    return docTable(head, body, totalsHtml) + docBudgetDisclaimer(m);
   }
 
   // Пояснювальна плашка під таблицею "Бюджет реалізації" у форматі
@@ -1303,7 +1338,65 @@
     </div>`;
   }
 
-  function renderDocument(model) {
+  // Візуальні блоки для розділу "Технічне рішення" у форматі "Документ з
+  // малюнками" (запит Анни, 2026-07-29): (1) завантажене фото розкладки
+  // панелей (той самий m.images[0], що йде на обкладинку "Презентації") із
+  // заголовком "Розташування панелей на об'єкті"; (2) стовпчикова діаграма
+  // помісячної генерації — та сама, що на слайді "Про проєкт" у "Презентації"
+  // (canvas + Chart.js, малюється у wireDocGenChart нижче). Без селектора
+  // місяця (Анна прибрала його з ТЗ — лише діаграма).
+  function docTechVisuals(m) {
+    const hero = m.images && m.images[0];
+    const photo = hero
+      ? `<div class="doc-img-wrap doc-visual"><div class="doc-visual-title">Розташування панелей на об'єкті</div><img src="${hero.url}"/></div>`
+      : "";
+    const chart = (m.hasPanels !== false && m.model.months && m.model.months.length)
+      ? `<div class="doc-visual doc-chart-block"><div class="doc-visual-title">Прогнозована генерація за місяцями, кВт·год</div><div class="doc-chart-wrap"><canvas id="doc-gen-chart"></canvas></div></div>`
+      : "";
+    return photo + chart;
+  }
+
+  // Малює стовпчикову діаграму помісячної генерації у "Документі з малюнками"
+  // (та сама конфігурація Chart.js, що й у render() для слайда "Про проєкт" —
+  // tierColors + genDataLabelsPlugin). Викликається після вставки HTML.
+  function wireDocGenChart(model) {
+    if (!(model.model.months && model.model.months.length && window.Chart)) return;
+    const ctx = document.getElementById("doc-gen-chart");
+    if (!ctx) return;
+    const genValues = model.model.months.map((mm) => mm.generation);
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: model.model.months.map((mm) => mm.month),
+        datasets: [{
+          label: "Генерація, кВт·год",
+          data: genValues,
+          backgroundColor: tierColors(genValues),
+          borderRadius: 4,
+          maxBarThickness: 46,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 28 } },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, border: { display: false } },
+          y: { display: false, beginAtZero: true, grid: { display: false }, border: { display: false } },
+        },
+      },
+      plugins: [genDataLabelsPlugin],
+    });
+  }
+
+  // opts.withImages (запит Анни, 2026-07-29) — формат "Документ з малюнками":
+  // усе як у звичайному "Документі" (портрет, ручна правка, вибір Розділів КП),
+  // ПЛЮС у розділі "Технічне рішення" — фото розкладки панелей + діаграма
+  // генерації, а в таблиці "Бюджет реалізації" — колонка "Од. виміру".
+  function renderDocument(model, opts) {
+    opts = opts || {};
+    const withImages = !!opts.withImages;
     const now = new Date();
     model.meta.kpNumber = model.meta.kpNumber || defaultKpNumber(now);
     model.meta.kpDateStr = model.meta.kpDateStr || fmtDate(now);
@@ -1319,14 +1412,23 @@
     // renderDocument() без цього поля (напр. старий кеш app.js).
     const sections = model.sections || { tech: true, finance: true, budget: true, warranty: true };
 
+    // У "Документі з малюнками" розділ "Технічне рішення" містить преамбулу +
+    // фото + діаграму; тоді avoidBreak НЕ ставимо (розділ високий і може
+    // законно переливатись на наступну сторінку — окремі фото/діаграма мають
+    // власний page-break-inside:avoid у style.css). У звичайному "Документі"
+    // розділ лишається коротким текстовим, з avoidBreak як раніше.
+    const techInner = sections.tech
+      ? (docPreamble(model) + (withImages ? docTechVisuals(model) : ""))
+      : "";
+
     const html = `
     <div class="doc-root">
       ${docHeader(model)}
       ${docTitle(model)}
-      ${docSection("Технічне рішення", sections.tech ? docPreamble(model) : "", { avoidBreak: true })}
+      ${docSection("Технічне рішення", techInner, { avoidBreak: !withImages })}
       ${docSection("Технічні характеристики", sections.tech ? docTechTable(model) : "", { avoidBreak: true })}
       ${docSection("Фінансові показники", sections.finance ? docFinTable(model) : "", { avoidBreak: true })}
-      ${docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model) : "")}
+      ${docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "")}
       ${docSection("Імітаційна модель СЕС", docPvsystBlock(model), { avoidBreak: true })}
       ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
       ${docManagerBlock()}
@@ -1335,6 +1437,8 @@
     const holder = document.getElementById("kp-doc");
     holder.innerHTML = html;
     holder.classList.add("ready");
+
+    if (withImages) wireDocGenChart(model);
   }
 
   function render(model) {
