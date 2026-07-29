@@ -264,7 +264,6 @@
           client: document.getElementById("in-client").value.trim(),
           kpNumber: document.getElementById("in-kpnum").value.trim(),
           validDays: Number(document.getElementById("in-validdays").value) || KP_CONFIG.DEFAULTS.validDays,
-          tiltAngle: document.getElementById("in-tilt").value.trim(),
         },
         overrides: {
           vatRate: (Number(document.getElementById("in-vat").value) || 20) / 100,
@@ -296,6 +295,11 @@
       docHolder.dataset.format = format;
       if (format === "document") {
         KpRender.renderDocument(model);
+      } else if (format === "document-images") {
+        // "Документ з малюнками" (запит Анни, 2026-07-29) — той самий
+        // портретний renderDocument, лише з фото + діаграмою в "Технічному
+        // рішенні" й колонкою "Од. виміру" в бюджеті.
+        KpRender.renderDocument(model, { withImages: true });
       } else {
         KpRender.render(model);
       }
@@ -378,7 +382,7 @@
     const doc = document.getElementById("kp-doc");
     const format = doc.dataset.format || "presentation";
 
-    if (format === "document") {
+    if (format === "document" || format === "document-images") {
       if (!doc.querySelector(".doc-root")) {
         setStatus("Спочатку сформуйте КП.", true);
         return;
