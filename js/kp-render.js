@@ -367,6 +367,38 @@
     return cat.items.filter((it) => !isStrayEquipNote(it.name));
   }
 
+  // Розносить приховану доставку по позиціях обладнання (див. докладний
+  // коментар у buildBudgetSections). deliveryAmount визначаємо як РІЗНИЦЮ
+  // між підсумком обладнання (equipmentCost, уже містить доставку) і сумою
+  // видимих рядків — тобто рівно та "нестача", про яку йдеться, незалежно від
+  // того, в якій колонці менеджер вписав суму доставки. Повертає НОВІ об'єкти
+  // позицій (оригінальні розпарсені дані не мутуємо), з полями unitNetto /
+  // lineNetto, збільшеними на однаковий коефіцієнт. Якщо доставки немає
+  // (різниця ≈ 0 або менша) — повертає вихідний список без змін.
+  function distributeDeliveryOverEquip(equip, equipmentCost) {
+    if (!equip || !equip.length) return equip || [];
+    const linesSum = equip.reduce((s, it) => s + (Number(it.lineNetto) || 0), 0);
+    const delivery = (Number(equipmentCost) || 0) - linesSum;
+    if (!(linesSum > 0) || !(delivery > 0.005)) return equip;
+    const f = delivery / linesSum;
+    // Цільові цілі долари по кожній позиції + залишок у найбільшу позицію,
+    // щоб сума показаних (округлених) вартостей точно збіглась з підсумком.
+    const rounded = equip.map((it) => Math.round((Number(it.lineNetto) || 0) * (1 + f)));
+    const target = Math.round(Number(equipmentCost) || 0);
+    let residual = target - rounded.reduce((s, v) => s + v, 0);
+    if (residual !== 0 && rounded.length) {
+      let maxIdx = 0;
+      for (let i = 1; i < rounded.length; i++) if (rounded[i] > rounded[maxIdx]) maxIdx = i;
+      rounded[maxIdx] += residual;
+    }
+    return equip.map((it, i) => {
+      const q = Number(it.qty);
+      const newLine = rounded[i];
+      const newUnit = q ? newLine / q : it.unitNetto;
+      return Object.assign({}, it, { lineNetto: newLine, unitNetto: newUnit });
+    });
+  }
+
   // "Роботи" — додано 2026-07-23 (запит Анни): раніше фіксований
   // хардкод-перелік (BUDGET_WORKS), тепер, як і "Обладнання" вище,
   // читається ДИНАМІЧНО з категорії "3" номенклатурної вкладки (позиційно
@@ -671,7 +703,20 @@
   // з ціною, без переліку.
   function buildBudgetSections(m, b) {
     const equip = findBudgetEquipItems(m.pdv);
-    const equipRows = equip.length ? equip : [{ name: "—", qty: null }];
+    // Рознесення доставки по позиціях обладнання (запит Анни, 2026-07-30).
+    // У категорії "Основне технічне обладнання та система кріплення" є
+    // службовий рядок доставки ("Доставка до нас. Не робимо націнку! Вписати
+    // суму доставок по усім позиціям"), який isStrayEquipNote прибирає з
+    // таблиці, АЛЕ його сума входить у підсумок обладнання (b.equipmentCost
+    // з parseBudgetCells). Тому видимі рядки без доставки в сумі дають менше
+    // підсумку рівно на доставку. Розподіляємо цю доставку ПРОПОРЦІЙНО
+    // вартості кожної позиції обладнання: і ціна за одиницю (unitNetto), і
+    // вартість позиції (lineNetto) зростають на однаковий % так, що сума
+    // рядків точно дорівнює підсумку. Залишок від округлення кладемо в
+    // найбільшу позицію. Доставка ніде окремим рядком не показується, підсумки
+    // не змінюються. Розподіл — ЛИШЕ по обладнанню (інші групи не чіпаємо).
+    const equipDistributed = distributeDeliveryOverEquip(equip, b.equipmentCost);
+    const equipRows = equipDistributed.length ? equipDistributed : [{ name: "—", qty: null }];
     const works = findBudgetWorksItems(m.pdv);
     const worksRows = works.length ? works : [{ name: "—", qty: null }];
     const materials = findBudgetMaterialItems(m.pdv);
