@@ -694,6 +694,23 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
 .doc-img-wrap img{ max-width:100%; border-radius:8px; }
 .doc-img-wrap .cap{ font-size:12px; color:var(--text-muted); margin-top:8px; }
 
+/* "Документ з малюнками" (запит Анни, 2026-07-29): фото розкладки панелей +
+   діаграма генерації в розділі "Технічне рішення". Кожен блок не розриваємо
+   між сторінками при друку; висоту фото обмежуємо, щоб портретна сторінка не
+   переповнювалась високим вертикальним знімком. */
+.doc-visual{ page-break-inside: avoid; break-inside: avoid; }
+.doc-visual-title{ font-size:13px; font-weight:800; color:var(--ink); margin:16px 0 8px; }
+.doc-img-wrap.doc-visual{ text-align:left; }
+.doc-img-wrap.doc-visual img{ max-height:150mm; object-fit:contain; }
+.doc-chart-block{ margin-top:4px; }
+.doc-chart-wrap{
+  position:relative;
+  height:300px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:14px 12px 10px;
+}
+
 /* Пояснювальна плашка під таблицею "Бюджет реалізації" (формат "Документ",
    запит Анни 2026-07-27) — виділений блок у фірмовому зеленому із зеленими
    маркерами-крапками. page-break-inside:avoid — щоб при друку блок не
