@@ -1308,7 +1308,7 @@
   // У форматі "Презентація" цей блок навмисно не показується — там під
   // бюджетом уже є aside .budget-notes зі схожими примітками.
   function docBudgetDisclaimer(m) {
-    const payLine = `<p class="dbn-pay">Оплата здійснюється в національній валюті за комерційним курсом на дату виконання платежу.</p>`;
+    const payLine = `<p class="dbn-analog">У разі відсутності позиції підбирається аналог</p><p class="dbn-pay">Оплата здійснюється в національній валюті за комерційним курсом на дату виконання платежу.</p>`;
     if (m && m.measured) {
       return `<div class="doc-budget-note">${payLine}</div>`;
     }
@@ -1324,9 +1324,17 @@
     </div>`;
   }
 
-  function docPvsystBlock(m) {
-    if (!m.pvsystImage) return "";
-    return `<div class="doc-img-wrap"><img src="${m.pvsystImage}"/><div class="cap">Карта затінення / 3D-модель об'єкта (PVsyst)</div></div>`;
+  // "Імітаційна модель СЕС" у форматах "Документ" / "Документ з малюнками"
+  // (запит Анни, 2026-07-29): замість скріншота PVsyst показуємо
+  // ЗАВАНТАЖЕНЕ зображення з поля форми "Зображення розташування
+  // панелей / візуалізація" (m.images[0]). PVsyst-скріншот
+  // (m.pvsystImage) лишається лише у форматі "Презентація" (сторінка "04").
+  // Якщо зображення не завантажено — секція не показується
+  // (docSection повертає "" на порожній вміст).
+  function docModelVisualBlock(m) {
+    const img = m.images && m.images[0];
+    if (!img) return "";
+    return `<div class="doc-img-wrap"><img src="${img.url}"/><div class="cap">Візуалізація розташування панелей на об'єкті</div></div>`;
   }
 
   function docManagerBlock() {
@@ -1338,22 +1346,18 @@
     </div>`;
   }
 
-  // Візуальні блоки для розділу "Технічне рішення" у форматі "Документ з
-  // малюнками" (запит Анни, 2026-07-29): (1) завантажене фото розкладки
-  // панелей (той самий m.images[0], що йде на обкладинку "Презентації") із
-  // заголовком "Розташування панелей на об'єкті"; (2) стовпчикова діаграма
-  // помісячної генерації — та сама, що на слайді "Про проєкт" у "Презентації"
-  // (canvas + Chart.js, малюється у wireDocGenChart нижче). Без селектора
-  // місяця (Анна прибрала його з ТЗ — лише діаграма).
+  // Візуальний блок для розділу "Технічне рішення" у форматі "Документ з
+  // малюнками": СТОВПЧИКОВА діаграма помісячної генерації — та
+  // сама, що на слайді "Про проєкт" у "Презентації" (canvas + Chart.js,
+  // малюється у wireDocGenChart нижче). ЗАВАНТАЖЕНЕ фото розкладки
+  // панелей (m.images[0]) БІЛЬШЕ НЕ дублюється тут — воно показується
+  // лише в розділі "Імітаційна модель СЕС" (docModelVisualBlock, запит
+  // Анни, 2026-07-29). Без селектора місяця — лише діаграма.
   function docTechVisuals(m) {
-    const hero = m.images && m.images[0];
-    const photo = hero
-      ? `<div class="doc-img-wrap doc-visual"><div class="doc-visual-title">Розташування панелей на об'єкті</div><img src="${hero.url}"/></div>`
-      : "";
     const chart = (m.hasPanels !== false && m.model.months && m.model.months.length)
       ? `<div class="doc-visual doc-chart-block"><div class="doc-visual-title">Прогнозована генерація за місяцями, кВт·год</div><div class="doc-chart-wrap"><canvas id="doc-gen-chart"></canvas></div></div>`
       : "";
-    return photo + chart;
+    return chart;
   }
 
   // Малює стовпчикову діаграму помісячної генерації у "Документі з малюнками"
@@ -1429,7 +1433,7 @@
       ${docSection("Технічні характеристики", sections.tech ? docTechTable(model) : "", { avoidBreak: true })}
       ${docSection("Фінансові показники", sections.finance ? docFinTable(model) : "", { avoidBreak: true })}
       ${docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "")}
-      ${docSection("Імітаційна модель СЕС", docPvsystBlock(model), { avoidBreak: true })}
+      ${docSection("Імітаційна модель СЕС", docModelVisualBlock(model), { avoidBreak: true })}
       ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
       ${docManagerBlock()}
     </div>`;
