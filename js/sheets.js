@@ -113,7 +113,15 @@
 
       const isCategoryHeader = /^\d+$/.test(a); // "1", "2", "3" (без крапки)
       if (isCategoryHeader && name) {
-        currentCat = { code: a, name, items: [] };
+        // "Од. виміру" на рівні КАТЕГОРІЇ (запит Анни, 2026-07-29): у рядку-
+        // заголовку категорії колонка "К-сть" (colQty) містить не число, а
+        // одиницю виміру для всієї категорії ("шт" / "шт/м.п." тощо). У рядках-
+        // позиціях та сама колонка — це вже кількість. Зберігаємо unitMeasure
+        // категорії — його бере колонка "Од. виміру" у форматі "Документ з
+        // малюнками" для позицій "Обладнання" та "Роботи" (для середніх
+        // підрозділів одиниця береться з Кошторису — див. parseKoshtorysGroups).
+        const um = colQty >= 0 && row[colQty] != null ? String(row[colQty]).trim() : "";
+        currentCat = { code: a, name, items: [], unitMeasure: um };
         categories.push(currentCat);
         continue;
       }
@@ -468,19 +476,24 @@
   function findKoshtorysColumns(rows) {
     for (let r = 0; r < Math.min(rows.length, 60); r++) {
       const row = rows[r] || [];
-      let labelCol = -1, nameCol = -1, qtyCol = -1, priceCol = -1;
+      let labelCol = -1, nameCol = -1, qtyCol = -1, unitCol = -1, priceCol = -1;
       for (let c = 0; c < row.length; c++) {
         const v = normForMatch(row[c]);
         if (!v) continue;
         if (labelCol < 0 && v.startsWith("тип товару")) labelCol = c;
         if (nameCol < 0 && v.startsWith("найменування")) nameCol = c;
         if (qtyCol < 0 && v.includes("кіл-сть")) qtyCol = c;
+        // Колонка "Од.Вим" (одиниця виміру) — стоїть між "Кіл-сть" і "Ціна"
+        // (запит Анни, 2026-07-29). Матчимо за початком "од" + "вим", тож
+        // "Од.Вим" / "Од. вим." / "Одиниця виміру" однаково розпізнаються.
+        if (unitCol < 0 && v.startsWith("од") && v.includes("вим")) unitCol = c;
         if (priceCol < 0 && v.startsWith("вартість")) priceCol = c;
       }
       if (nameCol >= 0 && priceCol >= 0) {
         if (labelCol < 0) labelCol = Math.max(0, nameCol - 1);
         if (qtyCol < 0) qtyCol = nameCol + 2;
-        return { labelCol, nameCol, qtyCol, priceCol, headerIdx: r };
+        if (unitCol < 0) unitCol = qtyCol + 1; // резерв: одразу після "Кіл-сть"
+        return { labelCol, nameCol, qtyCol, unitCol, priceCol, headerIdx: r };
       }
     }
     return null;
@@ -512,7 +525,8 @@
       const price = numeric(row[cols.priceCol]);
       if (!price || price === 0) continue; // без ціни/$0 — пропускаємо (заготовка)
       const qty = numeric(row[cols.qtyCol]);
-      items.push({ name, qty: qty != null ? qty : null });
+      const unit = cols.unitCol >= 0 && row[cols.unitCol] != null ? String(row[cols.unitCol]).trim() : "";
+      items.push({ name, qty: qty != null ? qty : null, unit });
     }
     return items;
   }
@@ -584,7 +598,11 @@
         if (!qtyStr) continue; // порожня "Кіл-сть" — не показуємо
         const qty = numeric(row[cols.qtyCol]);
         if (qty == null || qty === 0) continue;
-        cur.items.push({ name, qty });
+        // Од. виміру позиції — з колонки "Од.Вим" Кошторису (запит Анни,
+        // 2026-07-29): для середніх підрозділів бюджету одиниця береться саме
+        // звідси (пер-позиційно), а не з категорійного рівня ПДВ.
+        const unit = cols.unitCol >= 0 && row[cols.unitCol] != null ? String(row[cols.unitCol]).trim() : "";
+        cur.items.push({ name, qty, unit });
       }
     }
     return groups;
