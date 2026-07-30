@@ -1209,7 +1209,9 @@
   function docSection(title, innerHtml, opts) {
     if (!innerHtml) return "";
     opts = opts || {};
-    const cls = "doc-section" + (opts.avoidBreak ? " doc-section-avoid-break" : "");
+    const cls = "doc-section"
+      + (opts.avoidBreak ? " doc-section-avoid-break" : "")
+      + (opts.breakBefore ? " doc-section-break-before" : "");
     return `<div class="${cls}"><h2>${esc(title)}</h2>${innerHtml}</div>`;
   }
 
@@ -1487,7 +1489,7 @@
       ${docSection("Технічне рішення", techInner, { avoidBreak: !withImages })}
       ${docSection("Технічні характеристики", sections.tech ? docTechTable(model) : "", { avoidBreak: true })}
       ${docSection("Фінансові показники", sections.finance ? docFinTable(model) : "", { avoidBreak: true })}
-      ${docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "")}
+      ${docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "", { breakBefore: true })}
       ${docSection("Імітаційна модель СЕС", docModelVisualBlock(model), { avoidBreak: true })}
       ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
       ${docManagerBlock()}
