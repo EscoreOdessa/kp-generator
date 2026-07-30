@@ -1482,14 +1482,31 @@
       ? (docPreamble(model) + (withImages ? docTechVisuals(model) : ""))
       : "";
 
+    // Розділи, що йдуть ПЕРЕД "Бюджет реалізації". Рахуємо їх у змінні, бо від
+    // того, чи є серед них хоч один непорожній, залежить примусовий перенос
+    // бюджету на нову сторінку (див. нижче).
+    const secTech = docSection("Технічне рішення", techInner, { avoidBreak: !withImages });
+    const secTechSpec = docSection("Технічні характеристики", sections.tech ? docTechTable(model) : "", { avoidBreak: true });
+    const secFinance = docSection("Фінансові показники", sections.finance ? docFinTable(model) : "", { avoidBreak: true });
+
+    // "Бюджет реалізації" зазвичай починається з нової сторінки (breakBefore).
+    // АЛЕ якщо всі попередні розділи вимкнені на формі ("Розділи КП") і між
+    // заголовком КП та бюджетом нічого немає — примусовий перенос лишав би
+    // заголовок самотнім на 1-й сторінці, а таблицю відкидав на 2-гу (запит
+    // Анни 2026-07-30). Тому переносимо лише коли перед бюджетом є хоч один
+    // непорожній розділ; інакше бюджет іде одразу після заголовка на тому ж
+    // листі. docSection повертає "" на порожній вміст, тож перевірка на "" точна.
+    const hasContentBeforeBudget = !!(secTech || secTechSpec || secFinance);
+    const secBudget = docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "", { breakBefore: hasContentBeforeBudget });
+
     const html = `
     <div class="doc-root">
       ${docHeader(model)}
       ${docTitle(model)}
-      ${docSection("Технічне рішення", techInner, { avoidBreak: !withImages })}
-      ${docSection("Технічні характеристики", sections.tech ? docTechTable(model) : "", { avoidBreak: true })}
-      ${docSection("Фінансові показники", sections.finance ? docFinTable(model) : "", { avoidBreak: true })}
-      ${docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "", { breakBefore: true })}
+      ${secTech}
+      ${secTechSpec}
+      ${secFinance}
+      ${secBudget}
       ${docSection("Імітаційна модель СЕС", docModelVisualBlock(model), { avoidBreak: true })}
       ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
       ${docManagerBlock()}
