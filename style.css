@@ -794,6 +794,12 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
   table.doc-table thead{ display: table-header-group; }
   table.doc-table tfoot{ display: table-row-group; }
   .doc-section-avoid-break{ page-break-inside: avoid; break-inside: avoid; }
+  /* "Бюджет реалізації" завжди починається з нової сторінки при друку
+     (запит Анни 2026-07-30) — у форматах "Документ" та "Документ з
+     малюнками". :first-child — щоб не лишати порожню першу сторінку, якщо
+     бюджет раптом стане першим блоком. */
+  .doc-section-break-before{ page-break-before: always; break-before: page; }
+  .doc-section-break-before:first-child{ page-break-before: auto; break-before: auto; }
 }
 @page{ size: A4 landscape; margin: 0; }
 @page doc-page{ size: A4 portrait; margin: 16mm 15mm; }
