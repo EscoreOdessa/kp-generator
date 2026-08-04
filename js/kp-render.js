@@ -1366,8 +1366,15 @@
   // бюджетом уже є aside .budget-notes зі схожими примітками.
   function docBudgetDisclaimer(m) {
     const payLine = `<p class="dbn-analog">У разі відсутності позиції підбирається аналог</p><p class="dbn-pay">Оплата здійснюється в національній валюті за комерційним курсом на дату виконання платежу.</p>`;
+    // Порожня плашка для довільного коментаря менеджера у варіанті "Заміри"
+    // (запит Анни, 2026-08-04): йде під таблицею "Бюджет реалізації", ПЕРЕД
+    // текстом "У разі відсутності позиції підбирається аналог". За
+    // замовчуванням завжди порожня — заповнюється вручну в режимі
+    // "Редагувати" (app.js робить її contenteditable, попри порожній вміст).
+    // Порожня та поза режимом правки — не друкується (style.css @media print).
+    const manualComment = `<div class="doc-budget-comment"></div>`;
     if (m && m.measured) {
-      return `<div class="doc-budget-note">${payLine}</div>`;
+      return `${manualComment}<div class="doc-budget-note">${payLine}</div>`;
     }
     return `<div class="doc-budget-note">
       <p class="dbn-intro">Остаточна вартість робіт та матеріалів може бути скоригована після:</p>
@@ -1396,9 +1403,12 @@
 
   function docManagerBlock() {
     const mgr = window.KP_CONFIG.MANAGER;
+    // Ім'я (<b>) і телефон (<span>) — кожне окремим елементом-"листком",
+    // щоб режим "Редагувати" (app.js) робив їх редагованими поокремо
+    // (запит Анни, 2026-08-04: телефон теж має правитись, як і ім'я).
     return `<div class="doc-manager">
       <b>${esc(mgr.name)}</b>, ${esc(mgr.position)}<br/>
-      ${esc(mgr.email)} · ${esc(mgr.phone)}<br/>
+      ${esc(mgr.email)} · <span class="doc-mgr-phone">${esc(mgr.phone)}</span><br/>
       ${esc(mgr.address).replace(/,?\n/g, ", ")}
     </div>`;
   }

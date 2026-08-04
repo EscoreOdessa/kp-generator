@@ -55,6 +55,11 @@
     doc.classList.toggle("kp-editing", !!on);
     if (on) {
       editableLeaves(doc).forEach((el) => el.setAttribute("contenteditable", "true"));
+      // Порожня плашка коментаря ("Заміри") — editableLeaves пропускає
+      // порожні елементи, тож вмикаємо їй правку окремо (запит Анни, 2026-08-04).
+      doc.querySelectorAll(".doc-budget-comment").forEach((el) =>
+        el.setAttribute("contenteditable", "true")
+      );
     } else {
       // Знімаємо редагування з усіх полів (зокрема зашитих у розмітці).
       doc.querySelectorAll("[contenteditable]").forEach((el) =>
