@@ -66,7 +66,7 @@
       <div class="hero-bg" style="background-image:url('assets/hero-bg.jpg')"></div>
       <div class="hero-overlay"></div>
       <img class="hero-logo" src="assets/logo-white.png" alt="escore" />
-      <div class="hero-title">${m.hasPanels === false ? "Джерело безперебійного<br/>живлення" : `${cap(m.tech.stationType)} сонячна<br/>електростанція`}${m.tech.stationCapacityKw ? `<br/>${fmtNum(m.tech.stationCapacityKw, 2)} кВт` : ""}</div>
+      <div class="hero-title">${m.hasPanels === false ? "Джерело безперебійного<br/>живлення" : `${cap(m.tech.stationType)} сонячна<br/>електростанція`}${(m.model.capacityKwByPanels || m.tech.stationCapacityKw) ? `<br/>${fmtNum((m.model.capacityKwByPanels || m.tech.stationCapacityKw), 2)} кВт` : ""}</div>
     </section>`;
   }
 
@@ -136,7 +136,7 @@
     <section class="kp-page cover-page">
       ${pageHeader(m.meta, "cover")}
       <div class="kp-eyebrow">Сонячна електростанція під ключ</div>
-      <div class="kp-title">${m.hasPanels === false ? "Джерело безперебійного живлення" : `${cap(m.tech.stationType)} СЕС`}${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>
+      <div class="kp-title">${m.hasPanels === false ? "Джерело безперебійного живлення" : `${cap(m.tech.stationType)} СЕС`}${objectLabel(m)}${(m.model.capacityKwByPanels || m.tech.stationCapacityKw) ? " — " + fmtNum((m.model.capacityKwByPanels || m.tech.stationCapacityKw), 2) + " кВт" : ""}</div>
       <div class="kp-desc">
         Тип рішення: <b>${esc(stationNameNom(m))}</b>${m.hasPanels !== false && m.tech.hasBattery ? " та акумуляторна система (автономія / резерв)" : ""} — ${m.hasPanels === false ? "автономне резервне живлення об'єкта на акумуляторах, без сонячної генерації." : "генерація власної електроенергії для потреб об'єкта зі зниженням витрат на електропостачання."}
       </div>
@@ -207,7 +207,7 @@
       ${pageHeader(m.meta)}
       <div class="section-title"><span class="num-badge">01</span> Про проєкт</div>
       <div class="kp-body">
-        <p>Пропонуємо будівництво ${esc(stationNameGen(m))}${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. ${m.hasPanels === false
+        <p>Пропонуємо будівництво ${esc(stationNameGen(m))}${(m.model.capacityKwByPanels || m.tech.stationCapacityKw) ? " потужністю <b>" + fmtNum((m.model.capacityKwByPanels || m.tech.stationCapacityKw), 2) + " кВт</b>" : ""}${objectClause(m)}. ${m.hasPanels === false
           ? "Рішення забезпечує безперебійне живлення критичних навантажень об'єкта від акумуляторної системи під час перебоїв електропостачання."
           : `Рішення забезпечує генерацію власної електроенергії у денні години, коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}`}</p>
         ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}
@@ -1235,7 +1235,7 @@
     // прохід (для формату "Презентація") не зачепив — той самий
     // stationNameNom(m) helper, що вже використовується на обкладинці
     // слайд-формату.
-    return `<div class="doc-title">${esc(stationNameNom(m))}${objectLabel(m)}${m.tech.stationCapacityKw ? " — " + fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : ""}</div>`;
+    return `<div class="doc-title">${esc(stationNameNom(m))}${objectLabel(m)}${(m.model.capacityKwByPanels || m.tech.stationCapacityKw) ? " — " + fmtNum((m.model.capacityKwByPanels || m.tech.stationCapacityKw), 2) + " кВт" : ""}</div>`;
   }
 
   // Той самий текст-абзац, що й на слайді "Про проект" (pageAbout вище) —
@@ -1247,7 +1247,7 @@
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     return `<div class="doc-preamble">
-      <p>Пропонуємо будівництво ${esc(stationNameGen(m))}${m.tech.stationCapacityKw ? " потужністю <b>" + fmtNum(m.tech.stationCapacityKw, 2) + " кВт</b>" : ""}${objectClause(m)}. ${m.hasPanels === false
+      <p>Пропонуємо будівництво ${esc(stationNameGen(m))}${(m.model.capacityKwByPanels || m.tech.stationCapacityKw) ? " потужністю <b>" + fmtNum((m.model.capacityKwByPanels || m.tech.stationCapacityKw), 2) + " кВт</b>" : ""}${objectClause(m)}. ${m.hasPanels === false
         ? "Рішення забезпечує безперебійне живлення критичних навантажень об'єкта від акумуляторної системи під час перебоїв електропостачання."
         : `Рішення забезпечує генерацію власної електроенергії у денні години, коли зазвичай споживання найактивніше, зі зниженням витрат на електропостачання.${m.tech.hasBattery ? " Станція комплектується акумуляторною батареєю для автономної роботи / резервного живлення." : ""}`}</p>
       ${equipParts.length ? `<p>Основне обладнання: ${equipParts.join(", ")}.</p>` : ""}

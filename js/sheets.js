@@ -669,6 +669,12 @@
     const stationCostUsd = findLabelValue(rows, ["вартість", "сес"], ["1 квт"]);
     const costPerKw = findLabelValue(rows, ["вартість", "1 квт"]);
     const capacityKw = findLabelValue(rows, ["потужність", "сес"]); // потужність фотомодулів (панелей)
+    // Потужність станції ЗА ПАНЕЛЯМИ — фіксована комірка B3 вкладки
+    // "Моделювання Фін. показників роботи СЕС" (запит Анни, 2026-08-04):
+    // у ЗАГОЛОВКУ КП показуємо потужність станції саме за панелями, а не за
+    // інвертором. B3 = рядок "Потужність СЕС". Фолбек на пошук за підписом
+    // ("потужність"+"сес"), якщо комірка порожня чи не число.
+    const capacityKwByPanels = (rows[2] && rows[2][1] != null ? numeric(rows[2][1]) : null) ?? capacityKw;
     const annualGenKwh = findLabelValue(rows, ["річна", "генерація"], ["1 квт"]);
     const annualGenPerKw = findLabelValue(rows, ["річна", "генерація", "1 квт"]);
     const gen30y = findLabelValue(rows, ["генерація", "30 рок"]);
@@ -718,7 +724,7 @@
     }
 
     return {
-      stationCostUsd, costPerKw, capacityKw, annualGenKwh, annualGenPerKw,
+      stationCostUsd, costPerKw, capacityKw, capacityKwByPanels, annualGenKwh, annualGenPerKw,
       gen30y, income30y, lcoe30, annualSavingsUsd, paybackYears, tariff, months,
       annualSavings100, paybackAtTariff, totalEffect30y, lcoe30Uah, monthlySavings,
     };
