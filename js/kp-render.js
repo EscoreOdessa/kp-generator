@@ -1275,16 +1275,16 @@
       ["Акумулятор", m.tech.hasBattery && m.tech.batteryModel ? esc(m.tech.batteryModel) + (m.tech.batteryQty ? ` — ${m.tech.batteryQty} шт` : "") : null],
       ["Річна генерація", m.model.annualGenKwh ? fmtNum(m.model.annualGenKwh) + " кВт·год" : null],
       ["Річна генерація на 1 кВт", m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) + " кВт·год" : null],
-      ["Генерація за 30 років", m.model.gen30y ? fmtNum(m.model.gen30y) + " кВт·год" : null],
+      ["Генерація за 30 років (з урахуванням деградації фотоелектричних модулів: 1-й рік — 1%, починаючи з 2-го року — 0,4% щорічно)", m.model.gen30y ? fmtNum(m.model.gen30y) + " кВт·год" : null],
     ]);
   }
 
   function docFinTable(m) {
     return docKvTable([
       ["Річна економія (100% споживання)", m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : null],
-      ["Строк окупності при діючому тарифі", m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : null],
-      ["Загальний економічний ефект за 30 років", m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : null],
-      ["LCOE30 (собівартість 1 кВт·год)", m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн/кВт·год" : null],
+      ["Строк окупності при діючому тарифі (згідно наданих даних - 10 грн)", m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : null],
+      ["Загальний економічний ефект за 30 років (розраховано з урахуванням деградації фотоелектричних модулів та експлуатаційних втрат)", m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : null],
+      ["LCOE (собівартість 1 кВт·год) — середня вартість виробництва 1 кВт·год електроенергії. Розраховується як відношення загальних витрат на СЕС до загальної генерації за 30 років.", m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн/кВт·год" : null],
     ]);
   }
 
