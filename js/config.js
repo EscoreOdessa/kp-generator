@@ -68,7 +68,7 @@ window.KP_CONFIG = {
     name: "Кириченко Альбіна",
     position: "Менеджер клієнтського супроводу",
     photo: "assets/manager-albina.jpg",
-    email: "commercial@escore.com.ua",
+    email: "info@escore.com.ua",
     phone: "+38 075 410 00 16",
     address: "Одеса,\nвул. Леонтовича 16 А",
     instagram: "@escore.ua",

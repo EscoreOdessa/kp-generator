@@ -1403,12 +1403,12 @@
 
   function docManagerBlock() {
     const mgr = window.KP_CONFIG.MANAGER;
-    // Ім'я (<b>) і телефон (<span>) — кожне окремим елементом-"листком",
+    // Ім'я (<b>), email і телефон (<span>) — кожне окремим елементом-"листком",
     // щоб режим "Редагувати" (app.js) робив їх редагованими поокремо
-    // (запит Анни, 2026-08-04: телефон теж має правитись, як і ім'я).
+    // (запит Анни, 2026-08-04: телефон і email теж мають правитись, як ім'я).
     return `<div class="doc-manager">
       <b>${esc(mgr.name)}</b>, ${esc(mgr.position)}<br/>
-      ${esc(mgr.email)} · <span class="doc-mgr-phone">${esc(mgr.phone)}</span><br/>
+      <span class="doc-mgr-email">${esc(mgr.email)}</span> · <span class="doc-mgr-phone">${esc(mgr.phone)}</span><br/>
       ${esc(mgr.address).replace(/,?\n/g, ", ")}
     </div>`;
   }
