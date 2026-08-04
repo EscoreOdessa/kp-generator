@@ -121,7 +121,13 @@
         // малюнками" для позицій "Обладнання" та "Роботи" (для середніх
         // підрозділів одиниця береться з Кошторису — див. parseKoshtorysGroups).
         const um = colQty >= 0 && row[colQty] != null ? String(row[colQty]).trim() : "";
-        currentCat = { code: a, name, items: [], unitMeasure: um };
+        // names — УСІ назви позицій категорії, включно з тими, де К-сть=0
+        // (на відміну від items, звідки нульові відфільтровано). Потрібно
+        // для розпізнавання блоків Кошторису: назва блоку з К-сть=0 (напр.
+        // "Заземлення" в готівці) має відкривати СВІЙ блок у Кошторисі, а
+        // не зливатись у попередній — див. recognized у loadCalcFromSheet
+        // (запит Анни, 2026-08-04).
+        currentCat = { code: a, name, items: [], unitMeasure: um, names: [] };
         categories.push(currentCat);
         continue;
       }
@@ -163,6 +169,10 @@
       const lineBrutto = colLineBrutto >= 0 ? numeric(row[colLineBrutto]) : null;
 
       if (!name) continue; // порожні рядки-заглушки пропускаємо
+      // Реєструємо назву блоку ДО фільтра К-сть=0 (потрібно для recognized —
+      // назви блоків із нульовою кількістю теж мають розпізнаватись у
+      // Кошторисі, інакше їх позиції зливаються в попередній блок).
+      if (currentCat.names) currentCat.names.push(name);
       // ВИПРАВЛЕНО (2026-07-22, запит Анни): рядок, де К-сть (колонка C,
       // colQty) порожня або 0, взагалі не показується НІДЕ в документі —
       // незалежно від того, чи є в ньому якась ціна/сума. Раніше рядок
@@ -753,7 +763,21 @@
         // блок (див. коментар над parseKoshtorysGroups).
         const eqIdx = findEquipCategoryIndex(pdv.categories);
         const midCat = eqIdx >= 0 ? pdv.categories[eqIdx + 1] : null;
-        const recognized = new Set((midCat ? midCat.items : []).map((it) => blockKey(it.name)));
+        // recognized будуємо з УСІХ назв середньої категорії (midCat.names —
+        // включно з блоками, де К-сть=0), а НЕ лише з midCat.items (звідки
+        // нульові відфільтровано). Інакше блок із К-сть=0 (напр. "Заземлення"
+        // чи "Автоматика захисту фотоелектричних модулів" у готівці) не
+        // розпізнається як заголовок у Кошторисі й трактується як під-заголовок,
+        // через що його позиції зливаються в попередній видимий блок
+        // ("Кабельно-провідникова продукція" тощо). Тепер він відкриває СВІЙ
+        // блок; оскільки його сума з ПДВ/Готівка = 0, kp-render його ховає
+        // (empty-block hiding) — блок не показує нічого, як і має бути
+        // (запит Анни, 2026-08-04). Фолбек на midCat.items — для старого кешу
+        // парсера без поля names.
+        const recognizedNames = midCat
+          ? (midCat.names && midCat.names.length ? midCat.names : midCat.items.map((it) => it.name))
+          : [];
+        const recognized = new Set(recognizedNames.map(blockKey));
         // budgetDetail.groups — групи Кошторису як [{label, items}].
         // Ціни блоків сюди НЕ кладемо: суми завжди беруться з ПДВ/Готівка_ФОП
         // (позиції середньої категорії) у kp-render.js; Кошторис дає лише
