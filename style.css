@@ -739,6 +739,30 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
   box-shadow:0 0 0 3px var(--tint-2);
 }
 .doc-budget-note .dbn-pay{ margin:0; }
+/* Порожня плашка довільного коментаря у варіанті "Заміри" (запит Анни,
+   2026-08-04) — той самий фірмовий зелений стиль, що й .doc-budget-note.
+   За замовчуванням порожня: на екрані показується пунктиром з підказкою,
+   а коли порожня — у друк/PDF не потрапляє (@media print нижче). */
+.doc-budget-comment{
+  margin:14px 0 0;
+  padding:12px 18px;
+  background: var(--tint);
+  border-left:4px solid var(--green);
+  border-radius:8px;
+  font-size:13.5px;
+  line-height:1.5;
+  color:var(--ink-2);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.doc-budget-comment:empty{ border-left-style:dashed; min-height:1.2em; }
+.doc-budget-comment:empty::before{
+  content:"Коментар (за потреби заповніть у режимі «Редагувати»)";
+  color:#9aa3ad;
+}
+@media print{
+  .doc-budget-comment:empty{ display:none !important; }
+}
 .doc-manager{
   margin-top:12px;
   padding-top:16px;
