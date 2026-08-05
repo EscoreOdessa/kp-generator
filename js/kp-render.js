@@ -198,7 +198,7 @@
     // окремим текстовим лейблом попереду, щоб воно не повторювалось двічі
     // поспіль в одному реченні (запит Анни, 2026-07-14).
     const equipParts = [];
-    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     const hasGenStats = m.model.annualGenKwh || m.model.annualGenPerKw || m.model.gen30y;
@@ -1243,7 +1243,7 @@
   // m.tech (сама оновлюється під кожен файл-розрахунок).
   function docPreamble(m) {
     const equipParts = [];
-    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     return `<div class="doc-preamble">
@@ -1281,7 +1281,7 @@
 
   function docFinTable(m) {
     return docKvTable([
-      ["Річна економія (100% споживання)", m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : null],
+      ["Річна економія (за умови 100% споживання)", m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : null],
       ["Строк окупності при діючому тарифі (згідно наданих даних - 10 грн)", m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : null],
       ["Загальний економічний ефект за 30 років (розраховано з урахуванням деградації фотоелектричних модулів та експлуатаційних втрат)", m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : null],
       ["LCOE (собівартість 1 кВт·год) — середня вартість виробництва 1 кВт·год електроенергії. Розраховується як відношення загальних витрат на СЕС до загальної генерації за 30 років.", m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн/кВт·год" : null],
