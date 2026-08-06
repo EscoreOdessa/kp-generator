@@ -207,13 +207,10 @@
     // окремим текстовим лейблом попереду, щоб воно не повторювалось двічі
     // поспіль в одному реченні (запит Анни, 2026-07-14).
     const equipParts = [];
-    if (m.tech.panelModel) {
-      // Префікс "сонячні панелі" додаємо ЛИШЕ якщо назва моделі ще НЕ
-      // починається з "Сонячн(а/і) панел(ь/і)" — інакше слова дублюються
-      // ("сонячні панелі Сонячна панель Longi...", запит Анни, 2026-08-04).
-      const panelHasLabel = /^\s*сонячн[а-яіїєґ']*\s+панел/i.test(m.tech.panelModel);
-      equipParts.push(`${panelHasLabel ? "" : "сонячні панелі "}<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
-    }
+    // Назву панелей беремо як є з таблиці (вона вже містить "Сонячна панель…"),
+    // БЕЗ хардкод-префікса "сонячні панелі" — інакше слова дублювались
+    // (запит Анни, 2026-08-04). Так само, як інвертор/акумулятор нижче.
+    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     const hasGenStats = m.model.annualGenKwh || m.model.annualGenPerKw || m.model.gen30y;
@@ -1258,13 +1255,10 @@
   // m.tech (сама оновлюється під кожен файл-розрахунок).
   function docPreamble(m) {
     const equipParts = [];
-    if (m.tech.panelModel) {
-      // Префікс "сонячні панелі" додаємо ЛИШЕ якщо назва моделі ще НЕ
-      // починається з "Сонячн(а/і) панел(ь/і)" — інакше слова дублюються
-      // ("сонячні панелі Сонячна панель Longi...", запит Анни, 2026-08-04).
-      const panelHasLabel = /^\s*сонячн[а-яіїєґ']*\s+панел/i.test(m.tech.panelModel);
-      equipParts.push(`${panelHasLabel ? "" : "сонячні панелі "}<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
-    }
+    // Назву панелей беремо як є з таблиці (вона вже містить "Сонячна панель…"),
+    // БЕЗ хардкод-префікса "сонячні панелі" — інакше слова дублювались
+    // (запит Анни, 2026-08-04). Так само, як інвертор/акумулятор нижче.
+    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     return `<div class="doc-preamble">
