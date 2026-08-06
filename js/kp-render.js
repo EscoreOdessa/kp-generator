@@ -187,6 +187,15 @@
     return String(name || "").replace(/^\s*(PV\s*модул[ья]?|фотомодул[ья]?)\s*/i, "").trim();
   }
 
+  // Прибирає провідні слова "Сонячні панелі" з НАЗВИ моделі — лише для
+  // таблиці "Технічні характеристики", де перша колонка вже містить підпис
+  // "Сонячні панелі", тож у другій колонці ці слова дублювались (запит
+  // Анни, 2026-08-04). У "Технічному рішенні" та у джерелі (ПДВ/Готівка_ФОП)
+  // назва лишається повною — там це не чіпаємо.
+  function stripPanelLabel(name) {
+    return String(name || "").replace(/^\s*сонячн[а-яіїєґ']*\s+панел[а-яіїєґ']*\s*/i, "").trim();
+  }
+
   function pageAbout(m) {
     const gallery = m.images.slice(1);
     const chartId = "kp-gen-chart";
@@ -198,7 +207,7 @@
     // окремим текстовим лейблом попереду, щоб воно не повторювалось двічі
     // поспіль в одному реченні (запит Анни, 2026-07-14).
     const equipParts = [];
-    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     const hasGenStats = m.model.annualGenKwh || m.model.annualGenPerKw || m.model.gen30y;
@@ -1243,7 +1252,7 @@
   // m.tech (сама оновлюється під кожен файл-розрахунок).
   function docPreamble(m) {
     const equipParts = [];
-    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
+    if (m.tech.panelModel) equipParts.push(`сонячні панелі <b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
     if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
     if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
     return `<div class="doc-preamble">
@@ -1270,7 +1279,7 @@
       ["Тип станції", m.tech.stationType],
       ["Потужність інверторної групи", m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : null],
       ["Інвертор", m.tech.inverterModel ? esc(m.tech.inverterModel) + (m.tech.invertersQty ? ` — ${m.tech.invertersQty} шт` : "") : null],
-      ["Сонячні панелі", m.tech.panelModel ? esc(stripEquipPrefix(m.tech.panelModel)) + (m.tech.panelsQty ? ` — ${m.tech.panelsQty} шт` : "") : null],
+      ["Сонячні панелі", m.tech.panelModel ? esc(stripPanelLabel(stripEquipPrefix(m.tech.panelModel))) + (m.tech.panelsQty ? ` — ${m.tech.panelsQty} шт` : "") : null],
       ["Потужність масиву фотомодулів", m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) + " кВт" : null],
       ["Акумулятор", m.tech.hasBattery && m.tech.batteryModel ? esc(m.tech.batteryModel) + (m.tech.batteryQty ? ` — ${m.tech.batteryQty} шт` : "") : null],
       ["Річна генерація", m.model.annualGenKwh ? fmtNum(m.model.annualGenKwh) + " кВт·год" : null],
@@ -1281,7 +1290,7 @@
 
   function docFinTable(m) {
     return docKvTable([
-      ["Річна економія (за умови 100% споживання)", m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : null],
+      ["Річна економія (100% споживання)", m.model.annualSavings100 != null ? fmtUsd(m.model.annualSavings100) : null],
       ["Строк окупності при діючому тарифі (згідно наданих даних - 10 грн)", m.model.paybackAtTariff != null ? fmtNum(m.model.paybackAtTariff, 2) + " року" : null],
       ["Загальний економічний ефект за 30 років (розраховано з урахуванням деградації фотоелектричних модулів та експлуатаційних втрат)", m.model.totalEffect30y != null ? fmtUsd(m.model.totalEffect30y) : null],
       ["LCOE (собівартість 1 кВт·год) — середня вартість виробництва 1 кВт·год електроенергії. Розраховується як відношення загальних витрат на СЕС до загальної генерації за 30 років.", m.model.lcoe30Uah != null ? fmtNum(m.model.lcoe30Uah, 2) + " грн/кВт·год" : null],
@@ -1507,7 +1516,7 @@
     // непорожній розділ; інакше бюджет іде одразу після заголовка на тому ж
     // листі. docSection повертає "" на порожній вміст, тож перевірка на "" точна.
     const hasContentBeforeBudget = !!(secTech || secTechSpec || secFinance);
-    const secBudget = docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: true }) : "", { breakBefore: hasContentBeforeBudget });
+    const secBudget = docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "", { breakBefore: hasContentBeforeBudget });
 
     const html = `
     <div class="doc-root">
