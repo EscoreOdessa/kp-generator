@@ -190,14 +190,21 @@
 
 <div id="kp-doc"></div>
 
-<script src="js/logo.js"></script>
-<script src="js/config.js"></script>
-<script src="js/sheets.js"></script>
-<script src="js/drive.js"></script>
-<script src="js/pdf-report.js"></script>
-<script src="js/seasonal.js"></script>
-<script src="js/images.js"></script>
-<script src="js/kp-render.js"></script>
-<script src="js/app.js"></script>
+<!-- Локальні скрипти вантажимо з міткою свіжості (?v=timestamp), щоб браузер
+     ЗАВЖДИ брав актуальну версію після деплою й не показував старий кеш
+     (запит Анни, 2026-08-04: після деплою зміни не було видно без "жорсткого
+     оновлення" — бо URL скриптів не змінювався й браузер брав їх із кешу).
+     document.write під час первинного парсингу вантажить їх синхронно й
+     СТРОГО по черзі — точно як звичайні <script> вище, тож порядок і момент
+     виконання (до DOMContentLoaded) збережені. -->
+<script>
+(function () {
+  var v = Date.now();
+  var files = ["js/logo.js","js/config.js","js/sheets.js","js/drive.js","js/pdf-report.js","js/seasonal.js","js/images.js","js/kp-render.js","js/app.js"];
+  for (var i = 0; i < files.length; i++) {
+    document.write('<script src="' + files[i] + '?v=' + v + '"><\/script>');
+  }
+})();
+</script>
 </body>
 </html>
