@@ -28,8 +28,26 @@
   const EDIT_TARGET_SEL =
     "p,span,strong,em,b,i,td,th,li,h1,h2,h3,h4,h5,h6,small,figcaption,dt,dd,div,caption,a";
 
+  // Описові блоки, які треба редагувати ЦІЛКОМ, як одне поле (запит Анни,
+  // 2026-07-29): розділ "Про проєкт" (Презентація — .kp-body) і "Технічне
+  // рішення" (Документ / Документ з малюнками — .doc-preamble). Це абзаци з
+  // автозгенерованим описом, усередині яких є жирні вставки (<b> — моделі/
+  // потужність). Через ці вкладені <b> звичайна "листкова" логіка нижче
+  // пропускала абзаци (робила редагованими лише самі <b>, а не описовий
+  // текст навколо). Тепер увесь такий блок стає редагованим повністю, а його
+  // нащадків із загального переліку виключаємо, щоб не було вкладених
+  // contenteditable. (.kp-body сторінки "Фінансові показники" теж підпадає —
+  // це нешкідливо: той вступний абзац і так був редагований.)
+  const RICH_EDIT_SEL = ".doc-preamble, .kp-body";
+
   function editableLeaves(root) {
-    return Array.from(root.querySelectorAll(EDIT_TARGET_SEL)).filter((el) => {
+    const richBlocks = Array.from(root.querySelectorAll(RICH_EDIT_SEL)).filter(
+      (el) => el.textContent && el.textContent.trim() && !el.closest(".no-print")
+    );
+    const leaves = Array.from(root.querySelectorAll(EDIT_TARGET_SEL)).filter((el) => {
+      // Елементи всередині "багатого" блоку (та й сам блок) — не чіпаємо тут:
+      // блок редагується цілком, окремо (див. richBlocks вище).
+      if (el.closest(RICH_EDIT_SEL)) return false;
       // Лише "листя" — елементи, у яких із вкладених елементів хіба що <br>
       // (перенос рядка). Так кожне окреме число/рядок редагується точково,
       // без вкладених contenteditable один в одному, але заголовки з <br>
@@ -42,6 +60,7 @@
       if (el.closest(".no-print")) return false;
       return true;
     });
+    return leaves.concat(richBlocks);
   }
 
   function isEditing() {
@@ -55,11 +74,6 @@
     doc.classList.toggle("kp-editing", !!on);
     if (on) {
       editableLeaves(doc).forEach((el) => el.setAttribute("contenteditable", "true"));
-      // Порожня плашка коментаря ("Заміри") — editableLeaves пропускає
-      // порожні елементи, тож вмикаємо їй правку окремо (запит Анни, 2026-08-04).
-      doc.querySelectorAll(".doc-budget-comment").forEach((el) =>
-        el.setAttribute("contenteditable", "true")
-      );
     } else {
       // Знімаємо редагування з усіх полів (зокрема зашитих у розмітці).
       doc.querySelectorAll("[contenteditable]").forEach((el) =>
