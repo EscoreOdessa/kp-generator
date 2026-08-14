@@ -1562,8 +1562,8 @@
       ${secFinance}
       ${secBudget}
       ${docSection("Імітаційна модель СЕС", docModelVisualBlock(model), { avoidBreak: true })}
-      ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
       ${docSection("Додаткова інформація", docExtraBlock(model), { breakBefore: true })}
+      ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
       ${docManagerBlock()}
     </div>`;
 
@@ -1601,8 +1601,8 @@
       pageBudget(model),
       pageShading(model),
       pageSeasonal(model),
-      model.hasPanels === false ? "" : pageWarranty(model),
       pageExtra(model),
+      model.hasPanels === false ? "" : pageWarranty(model),
       pageManager(model),
     ].join("\n");
 
