@@ -545,18 +545,39 @@
 
     wireDropzone("drop-images", "in-images");
 
-    // "Додаткова сторінка" (запит Анни, 2026-08-14) — прев'ю + drag&drop для
-    // довільних скріншотів (кілька файлів), той самий механізм, що й для
-    // основних зображень.
-    document.getElementById("in-extra-images").addEventListener("change", async (e) => {
-      const list = document.getElementById("extra-thumbs");
-      list.innerHTML = "";
-      const imgs = await KpImages.readAll(e.target.files);
-      imgs.forEach((im) => {
+    // "Додаткова сторінка" (запит Анни, 2026-08-14; НАКОПИЧЕННЯ файлів —
+    // 2026-08-14): звичайний <input type=file> при КОЖНОМУ виборі ЗАМІНЮЄ
+    // .files (останній файл витісняв попередній — баг, який знайшла Анна).
+    // Тож ведемо власний накопичувач extraAccum і після кожного додавання
+    // (через діалог або drag&drop) переписуємо input.files ним — так файли
+    // додаються, а не заміщаються. Клік по мініатюрі прибирає конкретний файл.
+    const extraInput = document.getElementById("in-extra-images");
+    const extraList = document.getElementById("extra-thumbs");
+    const extraAccum = [];
+    function refreshExtra() {
+      const dt = new DataTransfer();
+      extraAccum.forEach((f) => dt.items.add(f));
+      extraInput.files = dt.files; // тримаємо input у синхроні (звідси читає генерація)
+      extraList.innerHTML = "";
+      extraAccum.forEach((f, idx) => {
         const i = document.createElement("img");
-        i.src = im.url;
-        list.appendChild(i);
+        i.src = URL.createObjectURL(f);
+        i.title = "Натисніть, щоб прибрати цей файл";
+        i.style.cursor = "pointer";
+        i.addEventListener("click", () => { extraAccum.splice(idx, 1); refreshExtra(); });
+        extraList.appendChild(i);
       });
+    }
+    // Програмна зміна input.files (у refreshExtra) НЕ стріляє "change", тож
+    // додаємо лише реально вибрані/перетягнуті файли — без повторного обліку.
+    extraInput.addEventListener("change", (e) => {
+      Array.from(e.target.files || []).forEach((f) => {
+        // Дедуп: той самий файл (ім'я+розмір+дата) двічі не додаємо.
+        if (!extraAccum.some((g) => g.name === f.name && g.size === f.size && g.lastModified === f.lastModified)) {
+          extraAccum.push(f);
+        }
+      });
+      refreshExtra();
     });
     wireDropzone("drop-extra", "in-extra-images");
 
