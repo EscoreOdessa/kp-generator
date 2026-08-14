@@ -566,6 +566,11 @@
       <div class="note"><span class="chk">✓</span><div><b>Оплата</b> здійснюється в національній валюті за комерційним курсом на дату виконання платежу</div></div>
       <div class="note"><span class="chk">✓</span><div>Пропозиція дійсна протягом <b>3 днів</b></div></div>
       ${opts.detail ? `<div class="note"><span class="chk">✓</span><div>У разі відсутності позиції підбирається аналог</div></div>` : ""}
+      <!-- Порожня плашка коментаря менеджера у "Презентації" (запит Анни,
+           2026-08-14) — та сама, що в Документах (.doc-budget-comment). Порожня
+           заповнюється в режимі "Редагувати"; порожню перед html2canvas-
+           експортом ховає app.js (у Презентації @media print не діє). -->
+      <div class="doc-budget-comment"></div>
     </aside>`;
   }
 
@@ -1391,7 +1396,7 @@
     if (m && m.measured) {
       return `${manualComment}<div class="doc-budget-note">${payLine}</div>`;
     }
-    return `<div class="doc-budget-note">
+    return `${manualComment}<div class="doc-budget-note">
       <p class="dbn-intro">Остаточна вартість робіт та матеріалів може бути скоригована після:</p>
       <ul class="dbn-list">
         <li>виїзду на об'єкт</li>
@@ -1480,6 +1485,30 @@
   // усе як у звичайному "Документі" (портрет, ручна правка, вибір Розділів КП),
   // ПЛЮС у розділі "Технічне рішення" — фото розкладки панелей + діаграма
   // генерації, а в таблиці "Бюджет реалізації" — колонка "Од. виміру".
+  // "Додаткова сторінка" (запит Анни, 2026-08-14) — довільні скріншоти/
+  // зображення, які менеджер підвантажує на формі при увімкненому чекбоксі
+  // "Додаткова сторінка" (app.js → model.extraImages, список {name,url}).
+  // Показуються В КІНЦІ КП, перед контактами менеджера, у всіх трьох форматах.
+  // Порожньо (чекбокс вимкнено або немає файлів) — нічого не додається.
+  // Презентація: кожен скрін — окремий слайд (.kp-page).
+  function pageExtra(m) {
+    const imgs = m.extraImages || [];
+    if (!imgs.length) return "";
+    return imgs.map((im) => `
+    <section class="kp-page extra-page">
+      ${pageHeader(m.meta)}
+      <div class="section-title">Додаткова інформація</div>
+      <div class="extra-img"><img src="${im.url}"/></div>
+    </section>`).join("\n");
+  }
+  // Документ / Документ з малюнками: скріни стопкою в розділі
+  // "Додаткова інформація" (кожен — окремий блок із власним page-break-inside).
+  function docExtraBlock(m) {
+    const imgs = m.extraImages || [];
+    if (!imgs.length) return "";
+    return imgs.map((im) => `<div class="doc-img-wrap doc-extra-img"><img src="${im.url}"/></div>`).join("");
+  }
+
   function renderDocument(model, opts) {
     opts = opts || {};
     const withImages = !!opts.withImages;
@@ -1534,6 +1563,7 @@
       ${secBudget}
       ${docSection("Імітаційна модель СЕС", docModelVisualBlock(model), { avoidBreak: true })}
       ${docSection("Гарантійний термін та термін використання", sections.warranty ? warrantyTableHtml() : "", { avoidBreak: true })}
+      ${docSection("Додаткова інформація", docExtraBlock(model), { breakBefore: true })}
       ${docManagerBlock()}
     </div>`;
 
@@ -1572,6 +1602,7 @@
       pageShading(model),
       pageSeasonal(model),
       model.hasPanels === false ? "" : pageWarranty(model),
+      pageExtra(model),
       pageManager(model),
     ].join("\n");
 
