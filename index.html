@@ -165,6 +165,22 @@
     <div class="thumb-list" id="img-thumbs"></div>
   </div>
 
+  <!-- "Додаткова сторінка" (запит Анни, 2026-08-14) — окрема сторінка в кінці
+       КП (перед контактами менеджера) з довільними скріншотами/зображеннями
+       для непередбаченої інформації. Працює у всіх трьох форматах. Показується
+       лише коли чекбокс увімкнено І завантажено хоч один файл. -->
+  <div class="field">
+    <label class="checkbox-field"><input type="checkbox" id="in-extra-page" /> Додаткова сторінка (довільні скріншоти / зображення)</label>
+  </div>
+  <div class="field">
+    <label>Файли для додаткової сторінки (можна кілька)</label>
+    <div class="dropzone" id="drop-extra">
+      <input type="file" id="in-extra-images" accept="image/*" multiple />
+      <div class="dropzone-hint">Перетягніть скріншоти сюди або натисніть, щоб вибрати файли</div>
+    </div>
+    <div class="thumb-list" id="extra-thumbs"></div>
+  </div>
+
   <div class="row3">
     <div class="field"><label>Об'єкт</label><input type="text" id="in-object" placeholder="напр. Сонячна станція для АТБ" /></div>
     <div class="field"><label>Адреса</label><input type="text" id="in-address" placeholder="м. Одеса, ..." /></div>
