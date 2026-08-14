@@ -159,6 +159,51 @@
     return sections;
   }
 
+  // ---------- Доп. сторінка: PDF → картинки (запит Анни, 2026-08-14) ----------
+  // Рендеримо PDF через pdfjsLib, що вже підключено в index.html (для PVsyst).
+  // Кожна сторінка PDF стає окремою картинкою (= окрема сторінка/слайд КП);
+  // для мініатюри рендеримо лише 1-шу сторінку (opts.onlyFirst).
+  function isPdfFile(f) {
+    return !!f && (f.type === "application/pdf" || /\.pdf$/i.test(f.name || ""));
+  }
+  async function renderPdfPages(file, opts) {
+    opts = opts || {};
+    const scale = opts.scale || 2;
+    const buf = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    const last = opts.onlyFirst ? 1 : pdf.numPages;
+    const urls = [];
+    for (let p = 1; p <= last; p++) {
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      urls.push(canvas.toDataURL("image/jpeg", 0.9));
+    }
+    return urls;
+  }
+  // Розгортає накопичені файли доп. сторінки у плоский список картинок
+  // {name,url}: зображення читаємо як data-URL, PDF рендеримо посторінково.
+  // Помилка на одному файлі не валить решту (fail-soft, лише попередження).
+  async function expandExtraFiles(fileList) {
+    const out = [];
+    for (const f of Array.from(fileList || [])) {
+      try {
+        if (isPdfFile(f) && window.pdfjsLib) {
+          const urls = await renderPdfPages(f, { scale: 2 });
+          urls.forEach((url, i) => out.push({ name: `${f.name} (стор. ${i + 1})`, url }));
+        } else {
+          out.push({ name: f.name, url: await KpImages.readAsDataUrl(f) });
+        }
+      } catch (e) {
+        console.warn("Доп. сторінка: не вдалось обробити файл (пропущено):", f.name, e);
+      }
+    }
+    return out;
+  }
+
   async function handleGenerate() {
     const btn = document.getElementById("btn-generate");
     btn.disabled = true;
@@ -230,7 +275,9 @@
       // чекбокс "Додаткова сторінка" І завантажено хоч один файл.
       const extraPageOn = document.getElementById("in-extra-page").checked;
       const extraFiles = document.getElementById("in-extra-images").files;
-      const extraImages = extraPageOn ? await KpImages.readAll(extraFiles) : [];
+      // expandExtraFiles: зображення → одна картинка; PDF → по картинці на
+      // кожну сторінку (запит Анни, 2026-08-14).
+      const extraImages = extraPageOn ? await expandExtraFiles(extraFiles) : [];
 
       // Звіт PvSyst.pdf з Google Drive (опційно) — сторінка "04" КП.
       // Якщо поле порожнє або файл не вдалось завантажити/відрендерити,
@@ -561,7 +608,15 @@
       extraList.innerHTML = "";
       extraAccum.forEach((f, idx) => {
         const i = document.createElement("img");
-        i.src = URL.createObjectURL(f);
+        if (isPdfFile(f) && window.pdfjsLib) {
+          // Мініатюра PDF — 1-ша сторінка (запит Анни, 2026-08-14). Рендер
+          // асинхронний; поки триває — img порожній, потім проставляємо src.
+          renderPdfPages(f, { onlyFirst: true, scale: 1 })
+            .then((urls) => { if (urls[0]) i.src = urls[0]; })
+            .catch(() => {});
+        } else {
+          i.src = URL.createObjectURL(f);
+        }
         i.title = "Натисніть, щоб прибрати цей файл";
         i.style.cursor = "pointer";
         i.addEventListener("click", () => { extraAccum.splice(idx, 1); refreshExtra(); });
