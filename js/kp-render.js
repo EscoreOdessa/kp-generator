@@ -793,7 +793,7 @@
       });
     });
 
-    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, price: b.worksCost, label: "Роботи", groupClass: "grp-works", unitMeasure: worksUnit });
+    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, lineFn: (it) => it.lineNetto, price: b.worksCost, label: "Роботи", groupClass: "grp-works", unitMeasure: worksUnit });
     return sections;
   }
 
