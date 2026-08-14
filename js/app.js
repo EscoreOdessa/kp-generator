@@ -224,6 +224,14 @@
       const imgFiles = document.getElementById("in-images").files;
       const images = await KpImages.readAll(imgFiles);
 
+      // "Додаткова сторінка" (запит Анни, 2026-08-14) — довільні скріншоти/
+      // зображення для окремої сторінки в кінці КП (перед контактами
+      // менеджера, у всіх трьох форматах). Показуються ЛИШЕ якщо увімкнено
+      // чекбокс "Додаткова сторінка" І завантажено хоч один файл.
+      const extraPageOn = document.getElementById("in-extra-page").checked;
+      const extraFiles = document.getElementById("in-extra-images").files;
+      const extraImages = extraPageOn ? await KpImages.readAll(extraFiles) : [];
+
       // Звіт PvSyst.pdf з Google Drive (опційно) — сторінка "04" КП.
       // Якщо поле порожнє або файл не вдалось завантажити/відрендерити,
       // сторінка просто не додається до документа (не критична помилка,
@@ -314,6 +322,7 @@
         sections,
         hasPanels,
         measured,
+        extraImages,
       };
 
       const docHolder = document.getElementById("kp-doc");
@@ -445,6 +454,10 @@
           useCORS: true,
           backgroundColor: "#ffffff",
           logging: false,
+          // Порожню плашку коментаря ("Заміри"/"Немає замірів") не тягнемо в
+          // PDF Презентації: @media print тут не діє (html2canvas малює живий
+          // DOM), тож ховаємо її в клоні перед знімком (запит Анни, 2026-08-14).
+          onclone: (cd) => cd.querySelectorAll(".doc-budget-comment:empty").forEach((el) => { el.style.display = "none"; }),
         });
         const imgData = canvas.toDataURL("image/jpeg", 0.92);
         if (!pdf) {
@@ -531,6 +544,21 @@
     });
 
     wireDropzone("drop-images", "in-images");
+
+    // "Додаткова сторінка" (запит Анни, 2026-08-14) — прев'ю + drag&drop для
+    // довільних скріншотів (кілька файлів), той самий механізм, що й для
+    // основних зображень.
+    document.getElementById("in-extra-images").addEventListener("change", async (e) => {
+      const list = document.getElementById("extra-thumbs");
+      list.innerHTML = "";
+      const imgs = await KpImages.readAll(e.target.files);
+      imgs.forEach((im) => {
+        const i = document.createElement("img");
+        i.src = im.url;
+        list.appendChild(i);
+      });
+    });
+    wireDropzone("drop-extra", "in-extra-images");
 
     // Запобіжник: якщо файл випадково впустили повз обидві зони скидання,
     // не даємо браузеру замінити сторінку цим файлом.
