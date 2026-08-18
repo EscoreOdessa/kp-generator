@@ -697,7 +697,7 @@ table.doc-table tr.doc-cat-row td{
   border-bottom:1px solid var(--line);
 }
 table.doc-table.doc-kv td:first-child{ color:var(--text-muted); }
-table.doc-table.doc-kv td.num{ font-weight:700; color:var(--ink); }
+table.doc-table.doc-kv td.num{ font-weight:700; color:var(--ink); white-space:normal; }
 table.doc-table tfoot td{
   font-weight:800;
   border-top:2px solid var(--green);
