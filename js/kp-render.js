@@ -782,7 +782,8 @@
       // сторінці лишались порожні/нульові плашки — блоки без значення не
       // показуємо взагалі).
       const price = it.lineNetto;
-      if (!price || price === 0) return;
+      const qty = Number(it.qty) || 0;
+      if (qty <= 0 && (!price || price === 0)) return;
       const g = groups ? findKoshtorysGroup(groups, it.name) : null;
       const detail = g && g.items && g.items.length ? g.items : null;
       sections.push({
@@ -792,6 +793,8 @@
         price,
         label: it.name,
         groupClass: "grp-mat",
+        blockQty: it.qty,
+        blockUnit: it.unit,
         unitMeasure: matUnit, // запасний варіант; основне джерело — it.unit з Кошторису
       });
     });
@@ -1378,8 +1381,17 @@
         return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsdSmart(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
 
+    const midRow = (sec) => {
+      const um = withUM ? ('<td>'+esc((sec.blockUnit!=null&&String(sec.blockUnit).trim())?String(sec.blockUnit).trim():(sec.unitMeasure||''))+'</td>') : '';
+      const q = sec.blockQty;
+      return '<tr><td>'+esc(sec.label)+'</td>'+um+'<td class=\"num\">'+(q==null?'':fmtNum(q))+'</td><td class=\"num\"></td><td class=\"num\">'+(sec.price!=null?fmtUsd(sec.price):'')+'</td></tr>';
+    };
     let body = "";
     sections.forEach((sec) => {
+      const __hasDetail = sec.items && sec.items.length;
+      if (!sec.noHeader) { if (sec.groupClass === "grp-mat" && !__hasDetail) { body += midRow(sec); } else { body += catRow(sec.label, sec.price); } }
+      if (__hasDetail) body += itemRows(sec);
+      return;
       // "Обладнання"/"Роботи" — БЕЗ рядка-заголовка (sec.noHeader, запит Анни
       // 2026-08-16, лише для Документа): їх позиції йдуть прямо, без плашки
       // назви блоку. Середні блоки заголовок зберігають.
