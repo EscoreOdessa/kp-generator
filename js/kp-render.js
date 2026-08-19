@@ -770,7 +770,7 @@
       // "Обладнання" — єдиний блок, де на КОЖНІЙ позиції показуємо ціну за
       // одиницю (unitFn — стовпець K ПДВ, it.unitNetto) та вартість позиції
       // (lineFn — стовпець L ПДВ, it.lineNetto) (запит менеджерів, 2026-07-27).
-      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, unitFn: (it) => it.unitNetto, lineFn: (it) => it.lineNetto, price: b.equipmentCost, label: "Обладнання", groupClass: "grp-equip", unitMeasure: equipUnit },
+      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, unitFn: (it) => it.unitNetto, lineFn: (it) => it.lineNetto, price: null, label: "Обладнання", groupClass: "grp-equip", unitMeasure: equipUnit },
     ];
 
     materials.forEach((it) => {
@@ -793,7 +793,7 @@
       });
     });
 
-    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, lineFn: (it) => it.lineNetto, price: b.worksCost, label: "Роботи", groupClass: "grp-works", unitMeasure: worksUnit });
+    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, lineFn: (it) => it.lineNetto, price: null, label: "Роботи", groupClass: "grp-works", unitMeasure: worksUnit });
     return sections;
   }
 
@@ -1351,7 +1351,7 @@
       return own || sec.unitMeasure || "";
     };
     const catRow = (label, price) =>
-      `<tr class="doc-cat-row"><td colspan="${catSpan}">${esc(label)}</td><td class="num">${fmtUsd(price)}</td></tr>`;
+      `<tr class="doc-cat-row"><td colspan="${catSpan}">${esc(label)}</td><td class="num">${price != null ? fmtUsd(price) : ""}</td></tr>`;
     const itemRows = (sec) =>
       sec.items.map((it) => {
         const q = sec.qtyFn(it);
