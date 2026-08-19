@@ -210,9 +210,12 @@
     // Назву панелей беремо як є з таблиці (вона вже містить "Сонячна панель…"),
     // БЕЗ хардкод-префікса "сонячні панелі" — інакше слова дублювались
     // (запит Анни, 2026-08-04). Так само, як інвертор/акумулятор нижче.
-    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
-    if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
-    if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
+    const _panels = (m.tech.panels && m.tech.panels.length) ? m.tech.panels : (m.tech.panelModel ? [{ name: m.tech.panelModel, qty: m.tech.panelsQty }] : []);
+    const _inverters = (m.tech.inverters && m.tech.inverters.length) ? m.tech.inverters : (m.tech.inverterModel ? [{ name: m.tech.inverterModel, qty: m.tech.invertersQty }] : []);
+    const _batteries = m.tech.hasBattery ? ((m.tech.batteries && m.tech.batteries.length) ? m.tech.batteries : (m.tech.batteryModel ? [{ name: m.tech.batteryModel, qty: m.tech.batteryQty }] : [])) : [];
+    _panels.forEach((p) => equipParts.push(`<b>${esc(stripEquipPrefix(p.name))}</b>${p.qty ? ` (${p.qty} шт)` : ""}`));
+    _inverters.forEach((iv) => equipParts.push(`<b>${esc(iv.name)}</b>${iv.qty ? ` (${iv.qty} шт)` : ""}`));
+    _batteries.forEach((b) => equipParts.push(`<b>${esc(b.name)}</b>${b.qty ? ` (${b.qty} шт)` : ""}`));
     const hasGenStats = m.model.annualGenKwh || m.model.annualGenPerKw || m.model.gen30y;
     return `
     <section class="kp-page">
@@ -1058,6 +1061,12 @@
   function buildTechSpec(pdv) {
     const specItems = [];
     let panelModel = null, panelsQty = 0, inverterModel = null, invertersQty = 0;
+    // Усі моделі кожного типу (панелі / інвертори / АКБ) так, як їх виписано в
+    // розрахунковій таблиці — щоб КОЖНУ показати окремим рядком у "Технічних
+    // характеристиках"/"Технічному рішенні" (запит Анни, 2026-08-16), а не лише
+    // одну. Одиничні поля вище лишаються для зворотної сумісності (= перша
+    // модель + сумарна кількість), тож КП з одним видом кожного виглядає як був.
+    const panels = [], inverters = [];
     let isHybrid = false, inverterKwTotal = 0;
     // batteryMatches (запит Анни, 2026-07-20, другий баг того ж дня): усі
     // позиції, назва яких згадує акумулятор/АКБ/батарею, збираються сюди
@@ -1085,8 +1094,9 @@
         const n = it.name.toLowerCase();
         const looksLikeAccessory = /кабел|провід|конектор|мс4|mc4|кріпленн|стійк/.test(n);
         const isPanel = !looksLikeAccessory && (/^фем$/i.test(it.code || "") || /панел/.test(n) || /^pv\s*модул/.test(n) || /^фотомодул/.test(n));
-        if (isPanel) { panelModel = it.name; panelsQty += it.qty; }
+        if (isPanel) { panels.push({ name: it.name, qty: it.qty }); panelModel = it.name; panelsQty += it.qty; }
         if (/інвертор/.test(n)) {
+          inverters.push({ name: it.name, qty: it.qty });
           inverterModel = it.name; invertersQty += it.qty;
           if (/г[іи]брид/.test(n)) isHybrid = true;
           const kwMatch = it.name.match(/(\d+(?:[.,]\d+)?)\s*k(?!wh)/i);
@@ -1116,24 +1126,22 @@
         }
     });
     const hasBattery = batteryMatches.length > 0;
-    let batteryModel = null, batteryQty = 0;
-    if (hasBattery) {
-      // Пріоритет — перший "первинний" збіг (isPrimary); якщо жодного
-      // немає (усі знайдені рядки — лише згадки в описі аксесуарів),
-      // повертаємось до старої поведінки — перший будь-який збіг. Кількість
-      // і назва беруться ЛИШЕ з цього одного обраного рядка — більше НЕ
-      // сумуються по всіх збігах одразу (сума "аксесуар + сам акумулятор"
-      // не мала жодного сенсу — саме це й спричиняло баг вище).
-      const chosen = batteryMatches.find((m) => m.isPrimary) || batteryMatches[0];
-      batteryModel = chosen.name;
-      batteryQty = chosen.qty;
-    }
+    // Реальні акумулятори (isPrimary — назва ПОЧИНАЄТЬСЯ з ключового слова), а
+    // не аксесуари, що лише згадують АКБ в описі — кожен окремим рядком. Якщо
+    // жодного "первинного" нема (усі — лише згадки), беремо перший будь-який
+    // (стара поведінка). Одиничні поля = перший обраний, для сумісності.
+    const primaryBatteries = batteryMatches.filter((m) => m.isPrimary);
+    const batteryList = primaryBatteries.length ? primaryBatteries : (batteryMatches.length ? [batteryMatches[0]] : []);
+    const batteries = batteryList.map((m) => ({ name: m.name, qty: m.qty }));
+    const batteryModel = batteries.length ? batteries[0].name : null;
+    const batteryQty = batteries.length ? batteries[0].qty : 0;
     const hybrid = isHybrid || hasBattery;
     const stationType = hybrid ? "гібридна" : "мережева";
     const stationTypeGen = hybrid ? "гібридної" : "мережевої";
     return {
       specItems: specItems.slice(0, 12), panelModel, panelsQty, inverterModel, invertersQty,
       batteryModel, batteryQty,
+      panels, inverters, batteries,
       stationType, stationTypeGen, hasBattery,
       stationCapacityKw: inverterKwTotal || null,
     };
@@ -1270,9 +1278,12 @@
     // Назву панелей беремо як є з таблиці (вона вже містить "Сонячна панель…"),
     // БЕЗ хардкод-префікса "сонячні панелі" — інакше слова дублювались
     // (запит Анни, 2026-08-04). Так само, як інвертор/акумулятор нижче.
-    if (m.tech.panelModel) equipParts.push(`<b>${esc(stripEquipPrefix(m.tech.panelModel))}</b>${m.tech.panelsQty ? ` (${m.tech.panelsQty} шт)` : ""}`);
-    if (m.tech.inverterModel) equipParts.push(`<b>${esc(m.tech.inverterModel)}</b>${m.tech.invertersQty ? ` (${m.tech.invertersQty} шт)` : ""}`);
-    if (m.tech.hasBattery && m.tech.batteryModel) equipParts.push(`<b>${esc(m.tech.batteryModel)}</b>${m.tech.batteryQty ? ` (${m.tech.batteryQty} шт)` : ""}`);
+    const _panels = (m.tech.panels && m.tech.panels.length) ? m.tech.panels : (m.tech.panelModel ? [{ name: m.tech.panelModel, qty: m.tech.panelsQty }] : []);
+    const _inverters = (m.tech.inverters && m.tech.inverters.length) ? m.tech.inverters : (m.tech.inverterModel ? [{ name: m.tech.inverterModel, qty: m.tech.invertersQty }] : []);
+    const _batteries = m.tech.hasBattery ? ((m.tech.batteries && m.tech.batteries.length) ? m.tech.batteries : (m.tech.batteryModel ? [{ name: m.tech.batteryModel, qty: m.tech.batteryQty }] : [])) : [];
+    _panels.forEach((p) => equipParts.push(`<b>${esc(stripEquipPrefix(p.name))}</b>${p.qty ? ` (${p.qty} шт)` : ""}`));
+    _inverters.forEach((iv) => equipParts.push(`<b>${esc(iv.name)}</b>${iv.qty ? ` (${iv.qty} шт)` : ""}`));
+    _batteries.forEach((b) => equipParts.push(`<b>${esc(b.name)}</b>${b.qty ? ` (${b.qty} шт)` : ""}`));
     return `<div class="doc-preamble">
       <p>Пропонуємо будівництво ${esc(stationNameGen(m))}${(m.model.capacityKwByPanels || m.tech.stationCapacityKw) ? " потужністю <b>" + fmtNum((m.model.capacityKwByPanels || m.tech.stationCapacityKw), 2) + " кВт</b>" : ""}${objectClause(m)}. ${m.hasPanels === false
         ? "Рішення забезпечує безперебійне живлення критичних навантажень об'єкта від акумуляторної системи під час перебоїв електропостачання."
@@ -1293,17 +1304,23 @@
     // якоїсь причини не розпізналась, тут все одно вийшла б "мережева", хоча
     // на інших сторінках уже стояло "гібридна". Фікс: одне джерело істини —
     // m.tech.stationType, як і скрізь інде в цьому файлі.
-    return docKvTable([
+    // Кожна модель кожного типу — окремим рядком (запит Анни, 2026-08-16),
+    // з fallback на одиничні поля (старий кеш m.tech без масивів).
+    const invList = (m.tech.inverters && m.tech.inverters.length) ? m.tech.inverters : (m.tech.inverterModel ? [{ name: m.tech.inverterModel, qty: m.tech.invertersQty }] : []);
+    const panelList = (m.tech.panels && m.tech.panels.length) ? m.tech.panels : (m.tech.panelModel ? [{ name: m.tech.panelModel, qty: m.tech.panelsQty }] : []);
+    const battList = (m.tech.hasBattery && m.tech.batteries && m.tech.batteries.length) ? m.tech.batteries : (m.tech.hasBattery && m.tech.batteryModel ? [{ name: m.tech.batteryModel, qty: m.tech.batteryQty }] : []);
+    const rows = [
       ["Тип станції", m.tech.stationType],
       ["Потужність інверторної групи", m.tech.stationCapacityKw ? fmtNum(m.tech.stationCapacityKw, 2) + " кВт" : null],
-      ["Інвертор", m.tech.inverterModel ? esc(m.tech.inverterModel) + (m.tech.invertersQty ? ` — ${m.tech.invertersQty} шт` : "") : null],
-      ["Сонячні панелі", m.tech.panelModel ? esc(stripPanelLabel(stripEquipPrefix(m.tech.panelModel))) + (m.tech.panelsQty ? ` — ${m.tech.panelsQty} шт` : "") : null],
-      ["Потужність масиву фотомодулів", m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) + " кВт" : null],
-      ["Акумулятор", m.tech.hasBattery && m.tech.batteryModel ? esc(m.tech.batteryModel) + (m.tech.batteryQty ? ` — ${m.tech.batteryQty} шт` : "") : null],
-      ["Річна генерація", m.model.annualGenKwh ? fmtNum(m.model.annualGenKwh) + " кВт·год" : null],
-      ["Річна генерація на 1 кВт", m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) + " кВт·год" : null],
-      ["Генерація за 30 років (з урахуванням деградації фотоелектричних модулів: 1-й рік — 1%, починаючи з 2-го року — 0,4% щорічно)", m.model.gen30y ? fmtNum(m.model.gen30y) + " кВт·год" : null],
-    ]);
+    ];
+    invList.forEach((iv) => rows.push(["Інвертор", esc(iv.name) + (iv.qty ? ` — ${iv.qty} шт` : "")]));
+    panelList.forEach((pl) => rows.push(["Сонячні панелі", esc(stripPanelLabel(stripEquipPrefix(pl.name))) + (pl.qty ? ` — ${pl.qty} шт` : "")]));
+    rows.push(["Потужність масиву фотомодулів", m.model.capacityKw ? fmtNum(m.model.capacityKw, 2) + " кВт" : null]);
+    battList.forEach((bt) => rows.push(["Акумулятор", esc(bt.name) + (bt.qty ? ` — ${bt.qty} шт` : "")]));
+    rows.push(["Річна генерація", m.model.annualGenKwh ? fmtNum(m.model.annualGenKwh) + " кВт·год" : null]);
+    rows.push(["Річна генерація на 1 кВт", m.model.annualGenPerKw ? fmtNum(m.model.annualGenPerKw) + " кВт·год" : null]);
+    rows.push(["Генерація за 30 років (з урахуванням деградації фотоелектричних модулів: 1-й рік — 1%, починаючи з 2-го року — 0,4% щорічно)", m.model.gen30y ? fmtNum(m.model.gen30y) + " кВт·год" : null]);
+    return docKvTable(rows);
   }
 
   function docFinTable(m) {
