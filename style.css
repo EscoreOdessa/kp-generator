@@ -411,20 +411,21 @@ table.budget-table{
    (нижче таблиці), а не "розтягнутий" вміст самої таблиці — рядки завжди
    нормального розміру, підсумки завжди одразу під останнім рядком. */
 table.budget-table th{
-  background: var(--green-dark);
-  color:#fff;
+  background: #EEF1F0;
+  color: var(--ink);
   text-align:center;
   padding:5px 12px;
   font-size:12px;
   font-weight:700;
   line-height:1.25;
+  border-bottom: 1.5px solid var(--line);
 }
 table.budget-table th:first-child{ text-align:center; }
 table.budget-table th.num{ text-align:center; }
 table.budget-table td{
   padding:4px 12px;
-  border-bottom: 1px solid rgba(255,255,255,.16);
-  color:#fff;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
   vertical-align:middle;
   text-align:center;
 }
@@ -439,7 +440,7 @@ table.budget-table td.budget-cat{
   font-weight:800;
 }
 table.budget-table tr.budget-cat-row td{
-  border-top: 2px solid rgba(255,255,255,.42);
+  border-top: 2px solid var(--line);
   font-weight:800;
 }
 table.budget-table tr.budget-cat-row:first-child td{ border-top:none; }
@@ -448,19 +449,20 @@ table.budget-table .budget-price{
   font-weight:800;
   font-size:13.5px;
 }
-table.budget-table .grp-equip{ background: var(--green); }
-table.budget-table .grp-works{ background: var(--green); }
-table.budget-table .grp-mat{ background: #4C7A72; }
+table.budget-table .grp-equip{ background: transparent; }
+table.budget-table .grp-works{ background: transparent; }
+table.budget-table .grp-mat{ background: transparent; }
 /* Виділення підзаголовків блоків (запит менеджерів, 2026-07-27): рядок-
    підзаголовок помітно темніший за свої позиції — так назва блоку чітко
    відділяється від переліку. Разом із жирним шрифтом і верхньою лінією
    (вище) блок читається одразу. */
 table.budget-table tr.budget-cat-row.grp-equip td,
-table.budget-table tr.budget-cat-row.grp-works td{ background: var(--green-dark); }
-table.budget-table tr.budget-cat-row.grp-mat td{ background: #375D57; }
-table.budget-table tfoot tr.sum{ background: var(--green-dark); font-weight:700; font-size:13.5px; }
-table.budget-table tfoot tr.sum td{ border-bottom: 1px solid rgba(255,255,255,.14); text-align:center; padding:6px 14px; }
-table.budget-table tfoot tr.sum.grand{ background:#022A24; font-size:15px; font-weight:800; }
+table.budget-table tr.budget-cat-row.grp-works td{ background: transparent; }
+table.budget-table tr.budget-cat-row.grp-mat td{ background: transparent; }
+table.budget-table tfoot tr.sum{ background: transparent; font-weight:700; font-size:13.5px; }
+table.budget-table tfoot tr.sum td{ border-bottom: 1px solid var(--line); text-align:center; padding:6px 14px; color: var(--ink); }
+table.budget-table tfoot tr.sum:first-child td{ border-top: 2px solid var(--line); }
+table.budget-table tfoot tr.sum.grand{ background: transparent; font-size:15px; font-weight:800; }
 table.budget-table tfoot tr.sum.grand td{ border-bottom:none; }
 table.budget-table tfoot tr.sum td.sum-label{ text-align:left; padding-left:12px; }
 table.budget-table [contenteditable]{ cursor:text; }
@@ -494,7 +496,7 @@ table.budget-table .budget-price span[contenteditable]:focus{ outline:2px solid 
   display:grid; grid-template-columns: 1.2fr 1fr; gap:12px; margin-top:16px;
 }
 .benefit-box{ border-radius:8px; padding:16px; }
-.benefit-box.green{ background: var(--green); color:#fff; }
+.benefit-box.green{ background: transparent; color: var(--ink); border:1px solid var(--line); }
 .benefit-box.dark{ background: var(--ink); color:#fff; }
 .benefit-box .big{ font-size:30px; font-weight:800; }
 .benefit-box .cap{ font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; opacity:.85; margin-bottom:4px; }
@@ -515,10 +517,11 @@ table.budget-table .budget-price span[contenteditable]:focus{ outline:2px solid 
 .warranty-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .warranty-page .logo{ height:28px; display:block; margin-bottom:24px; align-self:flex-start; }
 .warranty-banner{
-  background: var(--green); color:#fff;
+  background: transparent; color: var(--ink);
   font-size:26px; font-weight:800;
   padding:16px var(--page-pad);
   margin: 0 calc(-1 * var(--page-pad)) 0;
+  border-bottom: 2px solid var(--line);
 }
 .warranty-table-wrap{ margin: 0 calc(-1 * var(--page-pad)); flex:1; min-height:0; overflow:hidden; }
 table.warranty-table{
@@ -605,10 +608,11 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
 }
 .why-page{ display:flex; flex-direction:column; height: var(--page-h); overflow:hidden; }
 .why-banner{
-  background: var(--green); color:#fff;
+  background: transparent; color: var(--ink);
   font-size:28px; font-weight:800;
   padding:16px var(--page-pad);
   margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 26px;
+  border-bottom: 2px solid var(--line);
 }
 .why-body{ display:flex; gap:36px; flex:1; min-height:0; align-items:center; }
 .why-cert{ flex: 0 0 320px; align-self:center; }
@@ -658,10 +662,10 @@ table.warranty-table td[contenteditable]:focus{ outline:2px solid var(--green); 
 .doc-section h2{
   font-size:14px;
   font-weight:800;
-  color:#fff;
-  background: var(--green);
-  padding:8px 14px;
-  border-radius:6px;
+  color: var(--ink);
+  background: transparent;
+  padding:8px 0;
+  border-bottom: 2px solid var(--line);
   margin:0 0 12px;
 }
 .doc-preamble p{ margin:0 0 10px; }
@@ -691,10 +695,11 @@ table.doc-table tbody tr:last-child td{ border-bottom:none; }
    білим текстом (запит менеджерів, 2026-07-27) — щоб назва блоку чітко
    відділялася від переліку позицій. */
 table.doc-table tr.doc-cat-row td{
-  background: var(--green);
+  background: transparent;
   font-weight:700;
-  color:#fff;
+  color: var(--ink);
   border-bottom:1px solid var(--line);
+  border-top:1.5px solid var(--line);
 }
 table.doc-table.doc-kv td:first-child{ color:var(--text-muted); }
 table.doc-table.doc-kv td.num{ font-weight:700; color:var(--ink); white-space:normal; }
@@ -704,7 +709,7 @@ table.doc-table tfoot td{
   border-bottom:none;
   padding-top:8px;
 }
-table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--green-dark); }
+table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--ink); }
 .doc-img-wrap{ text-align:center; margin:4px 0 0; }
 .doc-img-wrap img{ max-width:100%; border-radius:8px; }
 .doc-img-wrap .cap{ font-size:12px; color:var(--text-muted); margin-top:8px; }
