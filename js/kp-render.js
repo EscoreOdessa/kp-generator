@@ -770,7 +770,7 @@
       // "Обладнання" — єдиний блок, де на КОЖНІЙ позиції показуємо ціну за
       // одиницю (unitFn — стовпець K ПДВ, it.unitNetto) та вартість позиції
       // (lineFn — стовпець L ПДВ, it.lineNetto) (запит менеджерів, 2026-07-27).
-      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, unitFn: (it) => it.unitNetto, lineFn: (it) => it.lineNetto, price: null, label: "Обладнання", groupClass: "grp-equip", unitMeasure: equipUnit },
+      { items: equipRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, unitFn: (it) => it.unitNetto, lineFn: (it) => it.lineNetto, price: null, noHeader: true, label: "Обладнання", groupClass: "grp-equip", unitMeasure: equipUnit },
     ];
 
     materials.forEach((it) => {
@@ -793,7 +793,7 @@
       });
     });
 
-    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, lineFn: (it) => it.lineNetto, price: null, label: "Роботи", groupClass: "grp-works", unitMeasure: worksUnit });
+    sections.push({ items: worksRows, nameFn: (it) => it.name, qtyFn: (it) => it.qty, lineFn: (it) => it.lineNetto, price: null, noHeader: true, label: "Роботи", groupClass: "grp-works", unitMeasure: worksUnit });
     return sections;
   }
 
@@ -1363,7 +1363,10 @@
 
     let body = "";
     sections.forEach((sec) => {
-      body += catRow(sec.label, sec.price);
+      // "Обладнання"/"Роботи" — БЕЗ рядка-заголовка (sec.noHeader, запит Анни
+      // 2026-08-16, лише для Документа): їх позиції йдуть прямо, без плашки
+      // назви блоку. Середні блоки заголовок зберігають.
+      if (!sec.noHeader) body += catRow(sec.label, sec.price);
       if (sec.items && sec.items.length) body += itemRows(sec);
     });
 
