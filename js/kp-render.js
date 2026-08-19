@@ -1072,8 +1072,16 @@
     // спільної суми) — картка "Акумулятор" показувала назву й кількість
     // шафи замість самого акумулятора. Див. sectionHasData нижче.
     const batteryMatches = [];
-    pdv.categories.forEach((cat) => {
-      cat.items.forEach((it) => {
+    // Розпізнаємо обладнання ТІЛЬКИ з першого розділу розрахункової таблиці —
+    // "Основне технічне обладнання та система кріплення". Раніше цикл ішов по
+    // ВСІХ категоріях, тож слова "інвертор"/"панел" із назв РОБІТ (напр.
+    // "Монтаж інвертора, АКБ та пусконаладка") хибно розпізнавались як
+    // обладнання й потрапляли в "Технічне рішення" (запит Анни, 2026-08-16).
+    const equipCat = pdv.categories.find((c) => {
+      const cn = (c.name || "").toLowerCase();
+      return cn.includes("техн") && cn.includes("облад");
+    });
+    (equipCat ? equipCat.items : []).forEach((it) => {
         const n = it.name.toLowerCase();
         const looksLikeAccessory = /кабел|провід|конектор|мс4|mc4|кріпленн|стійк/.test(n);
         const isPanel = !looksLikeAccessory && (/^фем$/i.test(it.code || "") || /панел/.test(n) || /^pv\s*модул/.test(n) || /^фотомодул/.test(n));
@@ -1106,7 +1114,6 @@
         if (it.qty > 0) {
           specItems.push({ label: it.name, value: `${it.qty} шт` });
         }
-      });
     });
     const hasBattery = batteryMatches.length > 0;
     let batteryModel = null, batteryQty = 0;
