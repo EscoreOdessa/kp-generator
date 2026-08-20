@@ -1590,7 +1590,7 @@
     // непорожній розділ; інакше бюджет іде одразу після заголовка на тому ж
     // листі. docSection повертає "" на порожній вміст, тож перевірка на "" точна.
     const hasContentBeforeBudget = !!(secTech || secTechSpec || secFinance);
-    const secBudget = docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: withImages }) : "", { breakBefore: hasContentBeforeBudget });
+    const secBudget = docSection("Бюджет реалізації", sections.budget ? docBudgetTable(model, { withUnitMeasure: true }) : "", { breakBefore: hasContentBeforeBudget });
 
     const html = `
     <div class="doc-root">
