@@ -786,6 +786,40 @@
       if (qty <= 0 && (!price || price === 0)) return;
       const g = groups ? findKoshtorysGroup(groups, it.name) : null;
       const detail = g && g.items && g.items.length ? g.items : null;
+      // Детальні блоки (запит Анни 2026-08-20): для PV кабелю, автоматики
+      // захисту (AC/DC) та кабельно-провідникової продукції у розширеному
+      // режимі прибираємо рядок-заголовок і суму блоку, а кожну позицію з
+      // Кошторису показуємо з розрахованою ціною: Ціна = (G Кошторису → $)
+      // × (1 + націнка блоку), де грн ділиться на курс L2 (m.usdRate), а
+      // вже-доларові значення беруться як є; Вартість = Ціна × кількість.
+      const isDetailPriced = /pv\s*кабел|автоматика\s+захисту|кабельно-?провідник/i.test(it.name);
+      if (isDetailPriced && detail) {
+        const rate = Number((b && b.usdRate) || m.usdRate) || 1;
+        const mkRaw = Number(it.markup) || 0;
+        const mkFrac = mkRaw > 1 ? mkRaw / 100 : mkRaw;
+        const priced = detail.map((d) => {
+          const raw = String(d.price == null ? "" : d.price);
+          const num = parseFloat(raw.replace(/[^0-9.,]/g, "").replace(/^\.+/, "").replace(/,/g, "")) || 0;
+          const usd = /грн/i.test(raw) ? (rate ? num / rate : 0) : num;
+          const unit = usd * (1 + mkFrac);
+          return Object.assign({}, d, { _unit: unit, _line: unit * (Number(d.qty) || 0) });
+        });
+        sections.push({
+          items: priced,
+          nameFn: budgetDetailNames,
+          qtyFn: budgetDetailQty,
+          unitFn: (d) => d._unit,
+          lineFn: (d) => d._line,
+          price: null,
+          noHeader: true,
+          label: it.name,
+          groupClass: "grp-mat",
+          detailPriced: true,
+          blockTotal: price,
+          unitMeasure: matUnit,
+        });
+        return;
+      }
       sections.push({
         items: detail || [],
         nameFn: budgetDetailNames,
@@ -1399,6 +1433,26 @@
       if (sec.items && sec.items.length) body += itemRows(sec);
     });
 
+    // Перевірка сум (запит Анни 2026-08-20) — лише на екрані (.no-print),
+    // у PDF не друкується.
+    let _colSum = 0; const _blockChecks = [];
+    sections.forEach((sec) => {
+      const hasDetail = sec.items && sec.items.length;
+      if (!sec.noHeader && sec.price != null) _colSum += Number(sec.price) || 0;
+      if (hasDetail && sec.lineFn) {
+        let s2 = 0; sec.items.forEach((it) => { const l = sec.lineFn(it); if (l != null && !isNaN(l)) s2 += Number(l); });
+        _colSum += s2;
+        if (sec.detailPriced && sec.blockTotal != null) _blockChecks.push({ label: sec.label, shown: s2, block: Number(sec.blockTotal) || 0 });
+      }
+    });
+    const _r2 = (x) => Math.round(x * 100) / 100;
+    const _TOL = 1;
+    const _rows = [];
+    const _cd = _r2(_colSum - (Number(b.nettoTotal) || 0));
+    if (Math.abs(_cd) > _TOL) _rows.push("Сума позицій: " + fmtUsd(_colSum) + " проти «Загальна вартість» " + fmtUsd(b.nettoTotal) + " — розбіжність " + fmtUsd(_cd));
+    _blockChecks.forEach((c) => { const d = _r2(c.shown - c.block); if (Math.abs(d) > _TOL) _rows.push(esc(c.label) + ": позиції " + fmtUsd(c.shown) + " \u2260 сума блоку " + fmtUsd(c.block) + " (розб. " + fmtUsd(d) + ")"); });
+    const _note = _rows.length ? ('<div class="no-print" style="margin:8px 0;padding:8px 10px;border:1px solid #d9a300;background:#fff8e1;color:#7a5b00;font-size:12px;border-radius:4px;line-height:1.5;">\u26a0 Перевірка сум (лише на екрані, у PDF/друку не показується):<br/>' + _rows.join("<br/>") + "</div>") : "";
+
     const totalsHtml = noVat
       ? `<tr class="grand"><td colspan="${catSpan}">Загальна вартість:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>`
       : `<tr><td colspan="${catSpan}">Разом без ПДВ:</td><td class="num">${fmtUsd(b.nettoTotal)}</td></tr>
@@ -1409,7 +1463,7 @@
       ? [{ label: "Найменування" }, { label: "Од. виміру" }, { label: "Кількість", num: true }, { label: unitHeader, num: true }, { label: priceHeader, num: true }]
       : [{ label: "Найменування" }, { label: "Кількість", num: true }, { label: unitHeader, num: true }, { label: priceHeader, num: true }];
 
-    return docTable(head, body, totalsHtml) + docBudgetDisclaimer(m);
+    return docTable(head, body, totalsHtml) + _note + docBudgetDisclaimer(m);
   }
 
   // Пояснювальна плашка під таблицею "Бюджет реалізації" у форматі
