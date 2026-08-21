@@ -478,11 +478,12 @@
   // позиції (line, стовпець L — "Сума продажу нетто без ПДВ з націнкою")
   // показуються ЛИШЕ в розділі "Обладнання" (запит менеджерів, 2026-07-27);
   // в інших блоках ці комірки порожні, а сума блоку стоїть на підзаголовку.
-  function budgetItemRow(name, qty, unit, line, groupClass) {
+  function budgetItemRow(name, qty, unit, line, groupClass, keepCents) {
+    const _pf = keepCents ? fmtUsdSmart : fmtUsd;
     return `<tr class="${groupClass}">
       <td contenteditable="true">${esc(name)}</td>
       <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
-      <td class="num" contenteditable="true">${unit != null ? fmtUsd(unit) : ""}</td>
+      <td class="num" contenteditable="true">${unit != null ? _pf(unit) : ""}</td>
       <td class="num" contenteditable="true">${line != null ? fmtUsd(line) : ""}</td>
     </tr>`;
   }
@@ -856,7 +857,7 @@
         (section.items || []).forEach((it) => {
           const unit = section.unitFn ? section.unitFn(it) : null;
           const line = section.lineFn ? section.lineFn(it) : null;
-          units.push({ html: budgetItemRow(section.nameFn(it), section.qtyFn(it), unit, line, section.groupClass), header: false });
+          units.push({ html: budgetItemRow(section.nameFn(it), section.qtyFn(it), unit, line, section.groupClass, /pv\s*кабел/i.test(String(section.label || ""))), header: false });
         });
       });
 
@@ -1409,14 +1410,18 @@
     };
     const catRow = (label, price) =>
       `<tr class="doc-cat-row"><td colspan="${catSpan}">${esc(label)}</td><td class="num">${price != null ? fmtUsd(price) : ""}</td></tr>`;
-    const itemRows = (sec) =>
-      sec.items.map((it) => {
+    const itemRows = (sec) => {
+      // Ціну округляємо до цілих скрізь, ОКРІМ блоку "PV кабель..." (запит
+      // Анни 2026-08-20) — там лишаємо копійки (fmtUsdSmart).
+      const _pf = /pv\s*кабел/i.test(String(sec.label || "")) ? fmtUsdSmart : fmtUsd;
+      return sec.items.map((it) => {
         const q = sec.qtyFn(it);
         const u = sec.unitFn ? sec.unitFn(it) : null;
         const l = sec.lineFn ? sec.lineFn(it) : null;
         const umCell = withUM ? `<td>${esc(measureOf(sec, it))}</td>` : "";
-        return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsd(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
+        return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? _pf(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
+    };
 
     const midRow = (sec) => {
       const um = withUM ? ('<td>'+esc((sec.blockUnit!=null&&String(sec.blockUnit).trim())?String(sec.blockUnit).trim():(sec.unitMeasure||''))+'</td>') : '';
