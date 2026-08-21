@@ -797,12 +797,14 @@
         const rate = Number((b && b.usdRate) || m.usdRate) || 1;
         const mkRaw = Number(it.markup) || 0;
         const mkFrac = mkRaw > 1 ? mkRaw / 100 : mkRaw;
+        const _pnum = (str) => parseFloat(String(str == null ? "" : str).replace(/[^0-9.,]/g, "").replace(/^\.+/, "").replace(/,/g, "")) || 0;
         const priced = detail.map((d) => {
           const raw = String(d.price == null ? "" : d.price);
-          const num = parseFloat(raw.replace(/[^0-9.,]/g, "").replace(/^\.+/, "").replace(/,/g, "")) || 0;
+          const num = _pnum(raw);
           const usd = /грн/i.test(raw) ? (rate ? num / rate : 0) : num;
           const unit = usd * (1 + mkFrac);
-          return Object.assign({}, d, { _unit: unit, _line: unit * (Number(d.qty) || 0) });
+          const q = Number(d.qty) || 0;
+          return Object.assign({}, d, { _unit: unit, _line: unit * q, _costL2: usd * q, _h: _pnum(d.koshtH), _priceMissing: num === 0 });
         });
         sections.push({
           items: priced,
@@ -816,6 +818,7 @@
           groupClass: "grp-mat",
           detailPriced: true,
           blockTotal: price,
+          blockMarkup: mkFrac,
           unitMeasure: matUnit,
         });
         return;
@@ -1442,7 +1445,7 @@
       if (hasDetail && sec.lineFn) {
         let s2 = 0; sec.items.forEach((it) => { const l = sec.lineFn(it); if (l != null && !isNaN(l)) s2 += Number(l); });
         _colSum += s2;
-        if (sec.detailPriced && sec.blockTotal != null) _blockChecks.push({ label: sec.label, shown: s2, block: Number(sec.blockTotal) || 0 });
+        if (sec.detailPriced && sec.blockTotal != null) _blockChecks.push({ sec: sec, shown: s2, block: Number(sec.blockTotal) || 0 });
       }
     });
     const _r2 = (x) => Math.round(x * 100) / 100;
@@ -1450,7 +1453,33 @@
     const _rows = [];
     const _cd = _r2(_colSum - (Number(b.nettoTotal) || 0));
     if (Math.abs(_cd) > _TOL) _rows.push("Сума позицій: " + fmtUsd(_colSum) + " проти «Загальна вартість» " + fmtUsd(b.nettoTotal) + " — розбіжність " + fmtUsd(_cd));
-    _blockChecks.forEach((c) => { const d = _r2(c.shown - c.block); if (Math.abs(d) > _TOL) _rows.push(esc(c.label) + ": позиції " + fmtUsd(c.shown) + " \u2260 сума блоку " + fmtUsd(c.block) + " (розб. " + fmtUsd(d) + ")"); });
+    _blockChecks.forEach((c) => {
+      const d = _r2(c.shown - c.block);
+      if (Math.abs(d) <= _TOL) return;
+      const mk = 1 + (Number(c.sec.blockMarkup) || 0);
+      const items = c.sec.items || [];
+      let sumH = 0, sumCostL2 = 0;
+      items.forEach((it) => { sumH += Number(it._h) || 0; sumCostL2 += Number(it._costL2) || 0; });
+      const blockCost = mk ? c.block / mk : 0;
+      const ratePart = _r2((sumCostL2 - sumH) * mk);
+      const coverPart = _r2((sumH - blockCost) * mk);
+      const parts = [];
+      if (Math.abs(ratePart) > _TOL) parts.push("курс " + fmtUsd(ratePart));
+      if (Math.abs(coverPart) > _TOL) parts.push("неповний перелік " + fmtUsd(coverPart));
+      const flags = [];
+      items.forEach((it) => {
+        const q = Number(it.qty) || 0;
+        const nm = "\u00ab" + esc(String(it.name || "").slice(0, 32)) + "\u00bb";
+        if (it._priceMissing && q > 0) { flags.push(nm + ": \u0454 \u043a-\u0441\u0442\u044c, \u043d\u0435\u043c\u0430\u0454 \u0446\u0456\u043d\u0438"); return; }
+        const h = Number(it._h) || 0, cc = Number(it._costL2) || 0;
+        if (h > 0 && cc > 0) { const ratio = cc / h; if (ratio < 0.7 || ratio > 1.4) flags.push(nm + ": \u0446\u0456\u043d\u0430 \u043d\u0435 \u0441\u0445\u043e\u0434\u0438\u0442\u044c\u0441\u044f \u0437 \u041a\u043e\u0448\u0442\u043e\u0440\u0438\u0441\u043e\u043c (\u0432\u0430\u043b\u044e\u0442\u0430/\u0437\u043d\u0430\u0447\u0435\u043d\u043d\u044f?)"); }
+        else if (h > 0 && cc === 0) flags.push(nm + ": \u043d\u0435\u043c\u0430\u0454 \u0446\u0456\u043d\u0438 \u0430\u0431\u043e \u043a\u0456\u043b\u044c\u043a\u043e\u0441\u0442\u0456");
+      });
+      let line = esc(c.sec.label) + ": \u0440\u043e\u0437\u0431\u0456\u0436\u043d\u0456\u0441\u0442\u044c " + fmtUsd(d);
+      if (parts.length) line += " \u2014 " + parts.join(", ");
+      if (flags.length) line += "; \u26a0 " + flags.join("; ");
+      _rows.push(line);
+    });
     const _note = _rows.length ? ('<div class="no-print" style="margin:8px 0;padding:8px 10px;border:1px solid #d9a300;background:#fff8e1;color:#7a5b00;font-size:12px;border-radius:4px;line-height:1.5;">\u26a0 Перевірка сум (лише на екрані, у PDF/друку не показується):<br/>' + _rows.join("<br/>") + "</div>") : "";
 
     const totalsHtml = noVat
