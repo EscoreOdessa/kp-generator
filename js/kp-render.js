@@ -482,7 +482,7 @@
     return `<tr class="${groupClass}">
       <td contenteditable="true">${esc(name)}</td>
       <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
-      <td class="num" contenteditable="true">${unit != null ? fmtUsdSmart(unit) : ""}</td>
+      <td class="num" contenteditable="true">${unit != null ? fmtUsd(unit) : ""}</td>
       <td class="num" contenteditable="true">${line != null ? fmtUsd(line) : ""}</td>
     </tr>`;
   }
@@ -1415,7 +1415,7 @@
         const u = sec.unitFn ? sec.unitFn(it) : null;
         const l = sec.lineFn ? sec.lineFn(it) : null;
         const umCell = withUM ? `<td>${esc(measureOf(sec, it))}</td>` : "";
-        return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsdSmart(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
+        return `<tr><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? fmtUsd(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
 
     const midRow = (sec) => {
