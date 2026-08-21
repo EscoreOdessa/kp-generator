@@ -792,7 +792,7 @@
       // Кошторису показуємо з розрахованою ціною: Ціна = (G Кошторису → $)
       // × (1 + націнка блоку), де грн ділиться на курс L2 (m.usdRate), а
       // вже-доларові значення беруться як є; Вартість = Ціна × кількість.
-      const isDetailPriced = /pv\s*кабел|автоматика\s+захисту|кабельно-?провідник|облік/i.test(it.name);
+      const isDetailPriced = /pv\s*кабел|автоматика\s+захисту|кабельно-?провідник|облік|заземленн/i.test(it.name);
       if (isDetailPriced && detail) {
         const rate = Number((b && b.usdRate) || m.usdRate) || 1;
         const mkRaw = Number(it.markup) || 0;
