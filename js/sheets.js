@@ -626,7 +626,7 @@
         // 2026-07-29): для середніх підрозділів бюджету одиниця береться саме
         // звідси (пер-позиційно), а не з категорійного рівня ПДВ.
         const unit = cols.unitCol >= 0 && row[cols.unitCol] != null ? String(row[cols.unitCol]).trim() : "";
-        cur.items.push({ name, qty, unit, price: cols.priceCol > 0 ? row[cols.priceCol - 1] : null });
+        cur.items.push({ name, qty, unit, price: cols.priceCol > 0 ? row[cols.priceCol - 1] : null, koshtH: cols.priceCol >= 0 ? row[cols.priceCol] : null });
       }
     }
     return groups;
