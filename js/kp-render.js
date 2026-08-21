@@ -20,6 +20,11 @@
     n === null || n === undefined || isNaN(n) ? "—" : "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtUsdSmart = (n) =>
     n === null || n === undefined || isNaN(n) ? "—" : (Number.isInteger(Math.round(Number(n) * 100) / 100) ? fmtUsd(n) : fmtUsdCents(n));
+  // Ціна округлюється до цілих, АЛЕ якщо округлення дало б $0 (дешева
+  // позиція < $0.5) — показуємо з копійками, щоб не було "$0" (запит Анни
+  // 2026-08-20).
+  const fmtUsdRound = (n) =>
+    n !== null && n !== undefined && !isNaN(n) && Number(n) !== 0 && Math.round(Number(n)) < 1 ? fmtUsdCents(n) : fmtUsd(n);
   const fmtNum = (n, d = 0) =>
     n === null || n === undefined || isNaN(n) ? "—" : Number(n).toLocaleString("uk-UA", { maximumFractionDigits: d });
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -479,7 +484,7 @@
   // показуються ЛИШЕ в розділі "Обладнання" (запит менеджерів, 2026-07-27);
   // в інших блоках ці комірки порожні, а сума блоку стоїть на підзаголовку.
   function budgetItemRow(name, qty, unit, line, groupClass, keepCents) {
-    const _pf = keepCents ? fmtUsdSmart : fmtUsd;
+    const _pf = keepCents ? fmtUsdSmart : fmtUsdRound;
     return `<tr class="${groupClass}">
       <td contenteditable="true">${esc(name)}</td>
       <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
@@ -814,7 +819,7 @@
           // (запит Анни 2026-08-20); для PV кабелю лишаємо копійки. Загальний
           // підсумок КП рахується окремо (точний) — тому сума стовпця може на
           // пару $ не збігатися з "Загальна вартість".
-          const _lineDisp = _keepCents ? unit * q : Math.round(unit) * q;
+          const _lineDisp = (_keepCents || Math.round(unit) < 1) ? Math.round(unit * q) : Math.round(unit) * q;
           return Object.assign({}, d, { _unit: unit, _line: unit * q, _lineDisp: _lineDisp, _costL2: usd * q, _h: _pnum(d.koshtH), _priceMissing: num === 0 });
         });
         sections.push({
@@ -1423,7 +1428,7 @@
     const itemRows = (sec) => {
       // Ціну округляємо до цілих скрізь, ОКРІМ блоку "PV кабель..." (запит
       // Анни 2026-08-20) — там лишаємо копійки (fmtUsdSmart).
-      const _pf = /pv\s*кабел/i.test(String(sec.label || "")) ? fmtUsdSmart : fmtUsd;
+      const _pf = /pv\s*кабел/i.test(String(sec.label || "")) ? fmtUsdSmart : fmtUsdRound;
       return sec.items.map((it) => {
         const q = sec.qtyFn(it);
         const u = sec.unitFn ? sec.unitFn(it) : null;
