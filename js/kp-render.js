@@ -799,20 +799,30 @@
         const mkRaw = Number(it.markup) || 0;
         const mkFrac = mkRaw > 1 ? mkRaw / 100 : mkRaw;
         const _pnum = (str) => parseFloat(String(str == null ? "" : str).replace(/[^0-9.,]/g, "").replace(/^\.+/, "").replace(/,/g, "")) || 0;
+        // Валюта G: долари ЛИШЕ якщо стоїть знак $; усе інше (грн або просто
+        // число без позначки, напр. "168") — гривні, ділимо на курс (запит
+        // Анни 2026-08-20 — інакше грн-число читалось як $, напр. кабель ВВГ
+        // "168" → $202/м замість ~$3.7/м).
+        const _keepCents = /pv\s*кабел/i.test(String(it.name || ""));
         const priced = detail.map((d) => {
           const raw = String(d.price == null ? "" : d.price);
           const num = _pnum(raw);
-          const usd = /грн/i.test(raw) ? (rate ? num / rate : 0) : num;
+          const usd = /\$/.test(raw) ? num : (rate ? num / rate : 0);
           const unit = usd * (1 + mkFrac);
           const q = Number(d.qty) || 0;
-          return Object.assign({}, d, { _unit: unit, _line: unit * q, _costL2: usd * q, _h: _pnum(d.koshtH), _priceMissing: num === 0 });
+          // Вартість = округлена Ціна × Кількість, щоб рядки перемножувались
+          // (запит Анни 2026-08-20); для PV кабелю лишаємо копійки. Загальний
+          // підсумок КП рахується окремо (точний) — тому сума стовпця може на
+          // пару $ не збігатися з "Загальна вартість".
+          const _lineDisp = _keepCents ? unit * q : Math.round(unit) * q;
+          return Object.assign({}, d, { _unit: unit, _line: unit * q, _lineDisp: _lineDisp, _costL2: usd * q, _h: _pnum(d.koshtH), _priceMissing: num === 0 });
         });
         sections.push({
           items: priced,
           nameFn: budgetDetailNames,
           qtyFn: budgetDetailQty,
           unitFn: (d) => d._unit,
-          lineFn: (d) => d._line,
+          lineFn: (d) => d._lineDisp,
           price: null,
           noHeader: true,
           label: it.name,
