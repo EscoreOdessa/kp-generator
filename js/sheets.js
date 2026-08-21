@@ -99,6 +99,7 @@
     if (headerRowIdx === -1) headerRowIdx = 0;
     const header = rows[headerRowIdx] || [];
     const cols = colsFn(header);
+    const _mkCol = findColIndex(header, ["націнк"], "first");
     const { colName, colQty, colUnit, colLine, colLineBrutto } = cols;
 
     const categories = [];
@@ -185,6 +186,7 @@
         // має звірятись з цим полем, а не з індексом у масиві.
         qty: qty || 0,
         unitNetto: unit || 0,
+        markup: numeric(row[_mkCol]),
         lineNetto: lineNetto != null ? lineNetto : (unit || 0) * (qty || 0),
         lineBrutto: lineBrutto != null ? lineBrutto : null,
       });
@@ -624,7 +626,7 @@
         // 2026-07-29): для середніх підрозділів бюджету одиниця береться саме
         // звідси (пер-позиційно), а не з категорійного рівня ПДВ.
         const unit = cols.unitCol >= 0 && row[cols.unitCol] != null ? String(row[cols.unitCol]).trim() : "";
-        cur.items.push({ name, qty, unit });
+        cur.items.push({ name, qty, unit, price: cols.priceCol > 0 ? row[cols.priceCol - 1] : null });
       }
     }
     return groups;
@@ -769,7 +771,7 @@
     const result = {
       pdv,
       model: parseModelSheet(modelRows),
-      budget: parseBudgetCells(pdv, pdvRows, budgetOpts),
+      budget: Object.assign(parseBudgetCells(pdv, pdvRows, budgetOpts), { usdRate: numeric(modelRows[1] && modelRows[1][11]) }),
       accumulatorCapacityKwh: parseAccumulatorCapacityKwh(pdvRows, mode),
     };
     if (opts.budgetDetail) {
