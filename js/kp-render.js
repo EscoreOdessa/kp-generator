@@ -1446,7 +1446,12 @@
         const u = sec.unitFn ? sec.unitFn(it) : null;
         const l = sec.lineFn ? sec.lineFn(it) : null;
         const umCell = withUM ? `<td>${esc(measureOf(sec, it))}</td>` : "";
-        return `<tr${_hide}><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num">${u != null ? _pf(u) : ""}</td><td class="num">${l != null ? fmtUsd(l) : ""}</td></tr>`;
+        // Ячейки Ціна/Вартість у рядках розшифровки середніх блоків (grp-mat)
+        // — редаговані вручну (запит Анни, 2026-08-24): у розширеному бюджеті
+        // без «Детальних цін» вони порожні, тож менеджер може вписати ціни
+        // по позиціях руками прямо в КП.
+        const _ed = sec.groupClass === "grp-mat" ? ' contenteditable="true"' : "";
+        return `<tr${_hide}><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num"${_ed}>${u != null ? _pf(u) : ""}</td><td class="num"${_ed}>${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
     };
 
