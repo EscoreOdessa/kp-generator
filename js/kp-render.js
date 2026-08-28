@@ -1451,7 +1451,11 @@
         // без «Детальних цін» вони порожні, тож менеджер може вписати ціни
         // по позиціях руками прямо в КП.
         const _ed = sec.groupClass === "grp-mat" ? ' contenteditable="true"' : "";
-        return `<tr${_hide}><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num"${_ed}>${u != null ? _pf(u) : ""}</td><td class="num"${_ed}>${l != null ? fmtUsd(l) : ""}</td></tr>`;
+        // Клас doc-cell-edit — видима рамка-підказка для порожніх редагованих
+        // клітинок (щоб було видно, куди вписувати ціну); у друку/PDF рамка
+        // прибирається (див. style.css @media print).
+        const _ec = sec.groupClass === "grp-mat" ? " doc-cell-edit" : "";
+        return `<tr${_hide}><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num${_ec}"${_ed}>${u != null ? _pf(u) : ""}</td><td class="num${_ec}"${_ed}>${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
     };
 
