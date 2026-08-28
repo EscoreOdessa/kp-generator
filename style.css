@@ -847,3 +847,10 @@ table.doc-table tfoot tr.grand td{ font-size:14.5px; color:var(--ink); font-weig
 }
 @page{ size: A4 landscape; margin: 0; }
 @page doc-page{ size: A4 portrait; margin: 16mm 15mm; }
+
+/* Редаговані вручну клітинки Ціна/Вартість у розшифровці бюджету («Документ»):
+   видима рамка-підказка на екрані, у друку/PDF — прибирається. */
+.doc-cell-edit{ outline: 1px dashed #c9b878; outline-offset: -3px; background: #fffdf3; min-width: 54px; }
+.doc-cell-edit:focus{ outline: 2px solid #6b8f71; background: #fff; }
+@media print{ .doc-cell-edit{ outline: none; background: transparent; } }
+
