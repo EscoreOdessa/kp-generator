@@ -81,9 +81,12 @@
         el.setAttribute("contenteditable", "true")
       );
     } else {
-      // Знімаємо редагування з усіх полів (зокрема зашитих у розмітці).
+      // Знімаємо редагування з усіх полів (зокрема зашитих у розмітці),
+      // АЛЕ клітинки Ціна/Вартість розшифровки бюджету (.doc-cell-edit,
+      // запит Анни 2026-08-24) лишаються редагованими ЗАВЖДИ — щоб менеджер
+      // міг вписувати ціни по позиціях руками без вмикання режиму правки.
       doc.querySelectorAll("[contenteditable]").forEach((el) =>
-        el.setAttribute("contenteditable", "false")
+        el.setAttribute("contenteditable", el.classList.contains("doc-cell-edit") ? "true" : "false")
       );
     }
     const btn = document.getElementById("btn-edit");
