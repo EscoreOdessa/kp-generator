@@ -474,7 +474,7 @@
   function budgetHeaderRow(label, price, groupClass) {
     return `<tr class="budget-cat-row ${groupClass}">
       <td colspan="3" class="budget-cat" contenteditable="true">${esc(label)}</td>
-      <td class="num budget-price"><span contenteditable="true">${price != null ? fmtUsd(price) : ""}</span></td>
+      <td class="num budget-price"><span class="kp-price-edit" contenteditable="true">${price != null ? fmtUsd(price) : ""}</span></td>
     </tr>`;
   }
   // Рядок-позиція блоку: назва + кількість + (лише для "Обладнання") ціна
@@ -488,8 +488,8 @@
     return `<tr class="${groupClass}">
       <td contenteditable="true">${esc(name)}</td>
       <td class="num" contenteditable="true">${qty == null ? "—" : fmtNum(qty)}</td>
-      <td class="num" contenteditable="true">${unit != null ? _pf(unit) : ""}</td>
-      <td class="num" contenteditable="true">${line != null ? fmtUsd(line) : ""}</td>
+      <td class="num kp-price-edit" contenteditable="true">${unit != null ? _pf(unit) : ""}</td>
+      <td class="num kp-price-edit" contenteditable="true">${line != null ? fmtUsd(line) : ""}</td>
     </tr>`;
   }
 
@@ -1436,7 +1436,7 @@
         ? ` style="background:#eef1f0;cursor:pointer" onclick="window.__kpBudgetToggle&&window.__kpBudgetToggle('${gid}',this)"`
         : ` style="background:#eef1f0"`;
       const _caret = gid ? `<span class="kp-caret">\u25b8</span> ` : "";
-      return `<tr class="doc-cat-row"${_bg}><td colspan="${catSpan}">${_caret}${esc(label)}</td><td class="num">${price != null ? fmtUsd(price) : ""}</td></tr>`;
+      return `<tr class="doc-cat-row"${_bg}><td colspan="${catSpan}">${_caret}${esc(label)}</td><td class="num kp-price-edit" contenteditable="true">${price != null ? fmtUsd(price) : ""}</td></tr>`;
     };
     const itemRows = (sec, gid) => {
       const _pf = fmtUsdSmart;
@@ -1450,19 +1450,20 @@
         // — редаговані вручну (запит Анни, 2026-08-24): у розширеному бюджеті
         // без «Детальних цін» вони порожні, тож менеджер може вписати ціни
         // по позиціях руками прямо в КП.
-        const _ed = sec.groupClass === "grp-mat" ? ' contenteditable="true"' : "";
-        // Клас doc-cell-edit — видима рамка-підказка для порожніх редагованих
-        // клітинок (щоб було видно, куди вписувати ціну); у друку/PDF рамка
-        // прибирається (див. style.css @media print).
-        const _ec = sec.groupClass === "grp-mat" ? " doc-cell-edit" : "";
-        return `<tr${_hide}><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num${_ec}"${_ed}>${u != null ? _pf(u) : ""}</td><td class="num${_ec}"${_ed}>${l != null ? fmtUsd(l) : ""}</td></tr>`;
+        // Ціна/Вартість у КОЖНІЙ позиції бюджету (обладнання, роботи, середні
+        // блоки) — редаговані вручну ЗАВЖДИ (запит Анни, 2026-08-24): клас
+        // kp-price-edit, якому app.js лишає contenteditable і поза режимом
+        // правки. Порожні клітинки середніх блоків додатково мають doc-cell-edit
+        // — видиму рамку-підказку. У друку/PDF підсвічування прибирається.
+        const _dc = sec.groupClass === "grp-mat" ? " doc-cell-edit" : "";
+        return `<tr${_hide}><td>${esc(sec.nameFn(it))}</td>${umCell}<td class="num">${q == null ? "—" : fmtNum(q)}</td><td class="num kp-price-edit${_dc}" contenteditable="true">${u != null ? _pf(u) : ""}</td><td class="num kp-price-edit${_dc}" contenteditable="true">${l != null ? fmtUsd(l) : ""}</td></tr>`;
       }).join("");
     };
 
     const midRow = (sec) => {
       const um = withUM ? ('<td>'+esc((sec.blockUnit!=null&&String(sec.blockUnit).trim())?String(sec.blockUnit).trim():(sec.unitMeasure||''))+'</td>') : '';
       const q = sec.blockQty;
-      return '<tr><td>'+esc(sec.label)+'</td>'+um+'<td class=\"num\">'+(q==null?'':fmtNum(q))+'</td><td class=\"num\"></td><td class=\"num\">'+(sec.price!=null?fmtUsd(sec.price):'')+'</td></tr>';
+      return '<tr><td>'+esc(sec.label)+'</td>'+um+'<td class=\"num\">'+(q==null?'':fmtNum(q))+'</td><td class=\"num kp-price-edit doc-cell-edit\" contenteditable=\"true\"></td><td class=\"num kp-price-edit\" contenteditable=\"true\">'+(sec.price!=null?fmtUsd(sec.price):'')+'</td></tr>';
     };
     let body = "";
     let _gid = 0;
