@@ -86,7 +86,7 @@
       // запит Анни 2026-08-24) лишаються редагованими ЗАВЖДИ — щоб менеджер
       // міг вписувати ціни по позиціях руками без вмикання режиму правки.
       doc.querySelectorAll("[contenteditable]").forEach((el) =>
-        el.setAttribute("contenteditable", el.classList.contains("doc-cell-edit") ? "true" : "false")
+        el.setAttribute("contenteditable", (el.classList.contains("doc-cell-edit") || el.classList.contains("kp-price-edit")) ? "true" : "false")
       );
     }
     const btn = document.getElementById("btn-edit");
