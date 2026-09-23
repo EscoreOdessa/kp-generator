@@ -261,6 +261,7 @@
   function equipType(name) {
     const n = norm(name);
     if (/доставк/.test(n)) return "delivery";
+    if (/кабел|провід|провод|конектор/.test(n)) return null;
     if (/панел|фем|фотомодул|модул[ьі] сонячн/.test(n)) return "panel";
     if (/інвертор/.test(n)) return "inverter";
     if (/акумулятор|аккумулятор|акб|батаре|lifepo|bms/.test(n)) return "battery";
@@ -350,7 +351,7 @@
     // Інша модель обладнання (інвертор ↔ інвертор, панелі ↔ панелі…):
     // різниця в ціні за одиницю — це НЕ подорожчання в постачальника, а
     // інше обладнання. Виносимо її в окремий фактор "заміна обладнання".
-    const isSwap = nameChanged && (c.section === "1" || !!equipType(c.name)) && !!equipType(c.name) && equipType(c.name) === equipType(p.name);
+    const isSwap = nameChanged && c.section === "1" && p.section === "1" && !!equipType(c.name) && equipType(c.name) === equipType(p.name);
     if (isSwap) {
       r.isSwap = true;
       r.fx.equip = r.fx.price; r.fx.price = 0;
